@@ -46,12 +46,21 @@ interface OpenPack {
   /** Ids follow the title/name until the author edits them. */
   idLinked: boolean;
   charIdLinked: boolean;
-  /** Problems found while importing (ZIP or CSV), shown on the Check tab until dismissed. */
+  /** Problems found while reading or importing files, shown on the Check tab until dismissed. */
   importIssues: Issue[];
+  importSource: "files" | "zip" | "csv";
 }
 
 type Status = { tone: "ok" | "error" | "info"; text: string } | null;
-type Pending = { title: string; body: string; confirm: string; danger?: boolean; run: () => void } | null;
+type Pending = {
+  title: string;
+  body: string;
+  confirm: string;
+  danger?: boolean;
+  run: () => void;
+  /** An optional second choice shown between Cancel and the main button. */
+  alt?: { label: string; run: () => void };
+} | null;
 
 const TABS: { id: EditorTab; label: string }[] = [
   { id: "topic", label: "Topic & character" },
@@ -77,6 +86,7 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
   const [preview, setPreview] = useState<GameTopic | null>(null);
   const [newDialog, setNewDialog] = useState(false);
   const [location, setLocation] = useState("");
+  const [dropping, setDropping] = useState(false);
   const urls = useRef(new ImageUrls());
   const zipInput = useRef<HTMLInputElement>(null);
   const openRef = useRef(open);
@@ -148,6 +158,7 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
         idLinked: false,
         charIdLinked: false,
         importIssues: p.loadIssues,
+        importSource: "files",
       });
       setQuestion(0);
       setTab("topic");
@@ -155,7 +166,7 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
     });
 
   const startNew = (draft: PackDraft, note: string, importIssues: Issue[] = [], linked = false) => {
-    setOpen({ folder: null, draft, version: 1, savedVersion: 0, idLinked: linked, charIdLinked: linked, importIssues });
+    setOpen({ folder: null, draft, version: 1, savedVersion: 0, idLinked: linked, charIdLinked: linked, importIssues, importSource: "zip" });
     setQuestion(0);
     setTab(linked ? "topic" : importIssues.some((i) => i.level === "error") ? "check" : "topic");
     setStatus({ tone: "info", text: note });
@@ -386,24 +397,44 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
       setStatus({ tone: "error", text: found[0]?.message ?? `${file.name} has no questions.` });
       return;
     }
-    const apply = () => {
-      update((d) => void (d.questions = questions));
-      setQuestion(0);
-      setOpen((o) => (o ? { ...o, importIssues: found } : o));
+    const apply = (mode: "replace" | "add") => {
+      const existing = openRef.current?.draft.questions ?? [];
+      // Work out the new list here, not inside the state updater, so the counts below are right.
+      let renamed = 0;
+      let next = questions;
+      if (mode === "add") {
+        const taken = existing.map((q) => q.id);
+        next = [
+          ...existing,
+          ...questions.map((q) => {
+            const id = uniqueId(q.id, taken);
+            if (id !== q.id) renamed++;
+            taken.push(id);
+            return { ...q, id };
+          }),
+        ];
+      }
+      update((d) => void (d.questions = next));
+      setQuestion(mode === "replace" ? 0 : existing.length);
+      setOpen((o) => (o ? { ...o, importIssues: found, importSource: "csv" } : o));
       const errs = found.filter((i) => i.level === "error").length;
+      const verb = mode === "replace" ? "Imported" : "Added";
+      const note = renamed ? ` ${renamed} question id${renamed === 1 ? " was" : "s were"} already used, so ${renamed === 1 ? "it got" : "they got"} a number added.` : "";
       setStatus(
         errs
-          ? { tone: "error", text: `Imported ${questions.length} questions, but ${errs} row${errs === 1 ? "" : "s"} had problems. See the Check tab.` }
-          : { tone: "ok", text: `Imported ${questions.length} questions from ${file.name}.` },
+          ? { tone: "error", text: `${verb} ${questions.length} questions, but ${errs} row${errs === 1 ? "" : "s"} had problems. See the Check tab.${note}` }
+          : { tone: "ok", text: `${verb} ${questions.length} questions from ${file.name}.${note}` },
       );
     };
-    if (open.draft.questions.length === 0) apply();
+    if (open.draft.questions.length === 0) apply("replace");
     else
       setPending({
-        title: "Replace all questions?",
-        body: `${file.name} has ${questions.length} questions. They will replace the ${open.draft.questions.length} questions in this pack.`,
-        confirm: "Replace questions",
-        run: apply,
+        title: "Replace or add questions?",
+        body: `${file.name} has ${questions.length} questions. Replace the ${open.draft.questions.length} questions in this pack, or add them after the ones you have?`,
+        confirm: "Replace all",
+        danger: true,
+        run: () => apply("replace"),
+        alt: { label: "Add to the end", run: () => apply("add") },
       });
   };
 
@@ -435,10 +466,34 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
     setPreview(packGameTopic(playable, urls.current, "preview"));
   };
 
-  if (preview) return <PreviewRun topic={preview} onClose={() => setPreview(null)} />;
+  const saveCard = async (blob: Blob, filename: string) => store.saveFile(new Uint8Array(await blob.arrayBuffer()), filename);
+
+  if (preview) return <PreviewRun topic={preview} onClose={() => setPreview(null)} saveFile={saveCard} />;
+
+  const isFileDrag = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes("Files");
 
   return (
-    <div className="ed">
+    <div
+      className={`ed${dropping ? " ed--drop" : ""}`}
+      onDragOver={(e) => {
+        // Image slots handle their own drops; anything else with a file may be a pack ZIP.
+        if (!isFileDrag(e.nativeEvent) || e.defaultPrevented) return;
+        e.preventDefault();
+        setDropping(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.relatedTarget || !(e.currentTarget as Node).contains(e.relatedTarget as Node)) setDropping(false);
+      }}
+      onDrop={(e) => {
+        setDropping(false);
+        if (e.defaultPrevented) return;
+        e.preventDefault();
+        const files = Array.from(e.dataTransfer.files);
+        const zip = files.find((f) => /\.zip$/i.test(f.name));
+        if (zip) guard(() => void importZip(zip));
+        else if (files.length) setStatus({ tone: "error", text: "Drop a pack .zip here to import it. Images go on the Images tab." });
+      }}
+    >
       <aside className="ed-side" aria-label="Your packs">
         <button type="button" className="btn btn--ghost btn--small ed-back" onClick={() => guard(onClose)}>
           ← Back to game
@@ -561,8 +616,18 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
                     id={`ed-tab-${t.id}`}
                     aria-selected={tab === t.id}
                     aria-controls="ed-panel"
+                    tabIndex={tab === t.id ? 0 : -1}
                     className={`ed-tab${tab === t.id ? " ed-tab--on" : ""}${t.id === "check" && counts.errors ? " ed-tab--bad" : ""}`}
                     onClick={() => setTab(t.id)}
+                    onKeyDown={(e) => {
+                      const i = TABS.findIndex((x) => x.id === t.id);
+                      const next = e.key === "ArrowRight" ? i + 1 : e.key === "ArrowLeft" ? i - 1 : e.key === "Home" ? 0 : e.key === "End" ? TABS.length - 1 : null;
+                      if (next === null) return;
+                      e.preventDefault();
+                      const target = TABS[(next + TABS.length) % TABS.length] as (typeof TABS)[number];
+                      setTab(target.id);
+                      document.getElementById(`ed-tab-${target.id}`)?.focus();
+                    }}
                   >
                     {t.label}
                     {n !== null && <span className="ed-tab__n">{n}</span>}
@@ -602,10 +667,12 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
                   {open.importIssues.length > 0 && (
                     <div className="ed-card">
                       <div className="ed-row ed-row--between">
-                        <h3 className="ed-card__title">From the last import</h3>
+                        <h3 className="ed-card__title">
+                          {open.importSource === "files" ? "Problems reading the pack's files" : open.importSource === "csv" ? "From the CSV import" : "From the ZIP import"}
+                        </h3>
                         <button type="button" className="link-btn" onClick={() => setOpen((o) => (o ? { ...o, importIssues: [] } : o))}>Dismiss</button>
                       </div>
-                      <p className="muted">Rows or files that couldn't be read were left out. Fix the source file and import again, or fix the pack here.</p>
+                      <p className="muted">Rows or files that couldn't be read were left out. Fix the source file and import again, or fix the pack here and save.</p>
                       <IssueList issues={open.importIssues} />
                     </div>
                   )}
@@ -639,6 +706,19 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
           actions={
             <>
               <button type="button" className="btn btn--ghost" data-autofocus onClick={() => setPending(null)}>Cancel</button>
+              {pending.alt && (
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={() => {
+                    const run = pending.alt?.run;
+                    setPending(null);
+                    run?.();
+                  }}
+                >
+                  {pending.alt.label}
+                </button>
+              )}
               <button
                 type="button"
                 className={`btn ${pending.danger ? "btn--danger" : "btn--primary"}`}
