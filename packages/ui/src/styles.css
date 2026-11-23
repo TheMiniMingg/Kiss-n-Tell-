@@ -164,6 +164,21 @@ button {
   color: var(--muted);
   vertical-align: middle;
 }
+.pill--mine {
+  background: #ff4f8b33;
+  color: var(--accent-2);
+}
+.home__topics-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 24px 0 12px;
+}
+.home__topics-head .section-title {
+  margin: 0;
+}
 .pill--accent {
   background: var(--legendary);
   color: #2a1d00;

@@ -7,6 +7,8 @@ export interface GameCharacter extends Character {
 
 export interface GameTopic extends Topic {
   sample?: boolean;
+  /** A pack made in the desktop editor rather than a bundled preset. */
+  local?: boolean;
   character: GameCharacter;
 }
 

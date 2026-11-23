@@ -8,9 +8,11 @@ interface Props {
   topics: GameTopic[];
   links?: AppLinks;
   onPlay: (topic: GameTopic) => void;
+  /** Desktop only: open the pack editor. */
+  onOpenEditor?: () => void;
 }
 
-export function Home({ topics, links, onPlay }: Props) {
+export function Home({ topics, links, onPlay, onOpenEditor }: Props) {
   const [showRules, setShowRules] = useState(false);
   return (
     <main className="home">
@@ -35,7 +37,12 @@ export function Home({ topics, links, onPlay }: Props) {
       </header>
 
       <section aria-labelledby="topics-title">
-        <h2 id="topics-title" className="section-title">Choose a topic</h2>
+        <div className="home__topics-head">
+          <h2 id="topics-title" className="section-title">Choose a topic</h2>
+          {onOpenEditor && (
+            <button className="btn btn--ghost btn--small" onClick={onOpenEditor}>Make your own packs</button>
+          )}
+        </div>
         {topics.length === 0 ? (
           <p className="muted">No topics are available yet.</p>
         ) : (
@@ -50,6 +57,7 @@ export function Home({ topics, links, onPlay }: Props) {
                       <span className="topic__title">
                         {t.title}
                         {t.sample && <span className="pill">Sample</span>}
+                        {t.local && <span className="pill pill--mine">My pack</span>}
                       </span>
                       {t.description && <span className="topic__desc">{t.description}</span>}
                       <span className="topic__meta">

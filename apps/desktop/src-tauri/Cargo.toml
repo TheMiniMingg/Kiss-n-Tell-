@@ -1,0 +1,29 @@
+[package]
+name = "kiss-n-tell"
+version = "0.1.0"
+description = "Kiss N Tell desktop: the trivia game plus an offline pack editor"
+authors = ["Kiss N Tell contributors"]
+license = "MIT"
+repository = "https://github.com/TheMiniMingg/Kiss-n-Tell-"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "kiss_n_tell_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
