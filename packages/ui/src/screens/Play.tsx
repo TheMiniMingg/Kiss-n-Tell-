@@ -8,7 +8,7 @@ import {
   type Rejection,
   type RunState,
 } from "@kiss-n-tell/engine";
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import type { GameTopic } from "../content.js";
 import { Modal } from "../components/Modal.js";
 import { StageMeter, StageViewer } from "../components/StageViewer.js";
@@ -31,9 +31,11 @@ interface Props {
   onQuestionShown: (questionId: string) => void;
   onFinish: (run: RunState) => void;
   onQuit: () => void;
+  /** Increments when the player presses the browser Back button; opens the quit dialog. */
+  quitRequest?: number;
 }
 
-export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit }: Props) {
+export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit, quitRequest = 0 }: Props) {
   const [run, setRun] = useState(initialRun);
   const [now, setNow] = useState(() => Date.now());
   const [input, setInput] = useState("");
@@ -78,11 +80,18 @@ export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit }: P
     };
   }, [answering, run.index]);
 
-  // Focus management.
+  // Back button asks before leaving.
   useEffect(() => {
+    if (quitRequest > 0) setConfirmQuit(true);
+  }, [quitRequest]);
+
+  // Focus management. Layout effect so focus happens inside the click/keypress
+  // that caused it, which lets iOS keep the keyboard open.
+  useLayoutEffect(() => {
+    if (confirmQuit) return;
     if (answering) inputRef.current?.focus();
     else nextRef.current?.focus();
-  }, [answering, run.index]);
+  }, [answering, run.index, confirmQuit]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -105,6 +114,12 @@ export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit }: P
     else setRun((r) => nextQuestion(r, Date.now()));
   }, [run, onFinish]);
 
+  // A held Enter key auto-repeats; never let a repeat skip the feedback.
+  const onNextKey = (e: KeyboardEvent<HTMLButtonElement>) => {
+    if (e.repeat && (e.key === "Enter" || e.key === " ")) e.preventDefault();
+  };
+
+  const isLast = run.index >= run.questions.length - 1;
   const msLeft = timeLeftMs(run, now);
   const secondsLeft = Math.ceil(msLeft / 1000);
   const fraction = answering ? msLeft / (q.timerSeconds * 1000) : 0;
@@ -135,7 +150,8 @@ export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit }: P
           <StageMeter stage={stage} />
         </div>
 
-        <section className="panel" aria-live="polite">
+        <div className="play__side">
+        <section className="panel">
           <p className="panel__kicker">Question {run.index + 1}</p>
           <h1 className="panel__prompt">{q.prompt}</h1>
 
@@ -180,17 +196,36 @@ export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit }: P
             </form>
           ) : (
             last && (
-              <div className="result" data-testid="result">
+              <div className="result" data-testid="result" role="status">
                 <TierBadge outcome={last.outcome} points={last.points} large />
                 {last.input && <p className="result__answer">You said <b>{last.input}</b></p>}
-                {justWon && <p className="result__win">Ending unlocked! Keep going to raise your score.</p>}
-                <button ref={nextRef} className="btn btn--primary btn--wide" onClick={advance}>
+                {justWon && (
+                  <p className="result__win">
+                    {isLast ? "Ending unlocked on the final question!" : "Ending unlocked! Keep going to raise your score."}
+                  </p>
+                )}
+                <button ref={nextRef} className="btn btn--primary btn--wide" onClick={advance} onKeyDown={onNextKey}>
                   {run.phase === "finished" ? "See results" : "Next question"}
                 </button>
               </div>
             )
           )}
         </section>
+        {run.results.length > 0 && (
+          <section className="history" aria-label="This run so far">
+            <h2 className="history__title">This run</h2>
+            <ol className="history__list">
+              {run.results.map((r, i) => (
+                <li key={r.questionId} className="history__row">
+                  <span className="history__num">{i + 1}</span>
+                  <span className="history__answer">{r.input || "No answer"}</span>
+                  <TierBadge outcome={r.outcome} points={r.points} />
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+        </div>
       </div>
 
       {confirmQuit && (

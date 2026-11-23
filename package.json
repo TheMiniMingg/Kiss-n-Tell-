@@ -18,7 +18,7 @@
     "preview": "pnpm --filter @kiss-n-tell/web preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "pnpm --filter @kiss-n-tell/web test:e2e",
+    "test:e2e": "pnpm build && pnpm --filter @kiss-n-tell/web test:e2e",
     "typecheck": "tsc -p packages/engine && tsc -p packages/ui && tsc -p apps/web && tsc -p scripts",
     "check": "pnpm typecheck && pnpm test && pnpm content:check"
   },

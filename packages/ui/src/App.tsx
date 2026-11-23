@@ -1,5 +1,5 @@
 import { drawQuestions, startRun, summarize, type RunState } from "@kiss-n-tell/engine";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { loadManifest, preloadImages, type GameTopic, type Manifest } from "./content.js";
 import { AgeGate } from "./screens/AgeGate.js";
 import { Home } from "./screens/Home.js";
@@ -36,6 +36,7 @@ export function App({ contentUrl, links, siteLabel }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [screen, setScreen] = useState<Screen>({ kind: "home" });
   const [attempt, setAttempt] = useState(0);
+  const [quitRequest, setQuitRequest] = useState(0);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -51,10 +52,39 @@ export function App({ contentUrl, links, siteLabel }: Props) {
     return () => ctrl.abort();
   }, [contentUrl, attempt]);
 
-  // Scroll to top on every screen change.
+  // Scroll to top and set the tab title on every screen change.
   useEffect(() => {
     window.scrollTo({ top: 0 });
-  }, [screen.kind]);
+    document.title = screen.kind === "home" ? "Kiss N Tell" : `${screen.topic.title} · Kiss N Tell`;
+  }, [screen]);
+
+  // Browser Back: from a run it asks before leaving; from results it goes home.
+  // Each non-home screen gets one history entry so Back never leaves the site mid-game.
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+  const leavingRef = useRef(false);
+  useEffect(() => {
+    if (screen.kind !== "home" && !window.history.state?.knt) {
+      window.history.pushState({ knt: true }, "");
+    }
+  }, [screen]);
+  useEffect(() => {
+    const onPop = () => {
+      if (leavingRef.current) {
+        leavingRef.current = false;
+        return;
+      }
+      const current = screenRef.current;
+      if (current.kind === "play") {
+        window.history.pushState({ knt: true }, "");
+        setQuitRequest((n) => n + 1);
+      } else if (current.kind === "results") {
+        setScreen({ kind: "home" });
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   const play = useCallback((topic: GameTopic) => {
     const { questions, restarted } = drawQuestions(topic.questions, storage.getSeen(topic.id), Math.random);
@@ -74,7 +104,14 @@ export function App({ contentUrl, links, siteLabel }: Props) {
     setScreen({ kind: "results", topic, run, isNewBest });
   }, []);
 
-  const home = useCallback(() => setScreen({ kind: "home" }), []);
+  const home = useCallback(() => {
+    // Drop our history entry so Back from home leaves the site as expected.
+    if (window.history.state?.knt) {
+      leavingRef.current = true;
+      window.history.back();
+    }
+    setScreen({ kind: "home" });
+  }, []);
   const label = siteLabel ?? (typeof window !== "undefined" ? window.location.host || "Kiss N Tell" : "Kiss N Tell");
 
   if (!adult) {
@@ -117,6 +154,7 @@ export function App({ contentUrl, links, siteLabel }: Props) {
           onQuestionShown={(id) => markSeen(screen.topic.id, id)}
           onFinish={(run) => finish(screen.topic, run)}
           onQuit={home}
+          quitRequest={quitRequest}
         />
       );
     case "results":

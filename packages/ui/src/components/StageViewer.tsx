@@ -1,4 +1,5 @@
 import { FINAL_STAGE } from "@kiss-n-tell/engine";
+import { useState } from "react";
 import type { GameCharacter } from "../content.js";
 
 interface Props {
@@ -10,13 +11,21 @@ interface Props {
 
 export function StageViewer({ character, stage, celebrate }: Props) {
   const src = character.stages[stage];
+  const [failed, setFailed] = useState<string | null>(null);
   const ratio = character.width && character.height ? `${character.width} / ${character.height}` : "3 / 4";
   return (
     <figure className={`stage${celebrate ? " stage--celebrate" : ""}`} style={{ aspectRatio: ratio }}>
-      {src ? (
-        <img key={src} className="stage__img" src={src} alt={`${character.name}, stage ${stage} of ${FINAL_STAGE}`} draggable={false} />
+      {src && failed !== src ? (
+        <img
+          key={src}
+          className="stage__img"
+          src={src}
+          alt={`${character.name}, stage ${stage} of ${FINAL_STAGE}`}
+          draggable={false}
+          onError={() => setFailed(src)}
+        />
       ) : (
-        <div className="stage__missing">Image missing</div>
+        <div className="stage__missing" role="img" aria-label="Image unavailable">Image unavailable</div>
       )}
       <figcaption className="stage__caption">
         <span className="stage__name">{character.name}</span>

@@ -62,7 +62,7 @@ export function Results({ topic, run, isNewBest, siteLabel, onReplay, onHome }: 
         </div>
         <section className="panel">
           <p className="panel__kicker">{topic.title}</p>
-          <h1 className="results__title">{summary.won ? "Ending unlocked!" : "So close"}</h1>
+          <h1 className="results__title">{summary.won ? "Ending unlocked!" : summary.score >= 7 ? "So close!" : "Run over"}</h1>
           <p className="results__score">
             <span className="results__num" data-testid="final-score">{summary.score}</span>
             <span className="results__max">/ {summary.maxScore} points</span>
