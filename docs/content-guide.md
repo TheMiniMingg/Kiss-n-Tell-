@@ -49,3 +49,7 @@ pnpm content:check        # validate all topics
 pnpm content:build        # validate and write apps/web/public/content
 pnpm content:placeholders # regenerate the sample SVG art
 ```
+
+## Drafts
+
+Folders in `content/presets` whose name starts with `_` (for example `_my-draft`) are ignored by the build, so you can work on a topic without it appearing in the game.
