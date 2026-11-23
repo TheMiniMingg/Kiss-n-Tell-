@@ -92,3 +92,49 @@ test("a topic with exactly 7 questions can be replayed", async ({ page }) => {
   await page.getByRole("button", { name: "Play Beta Topic again" }).click();
   await expect(page.locator("#answer")).toBeVisible();
 });
+
+test("using Back in one run doesn't open the quit dialog in the next run", async ({ page }) => {
+  await startTopic(page);
+  await page.goBack();
+  const dialog = page.getByRole("dialog", { name: "Leave this run?" });
+  await dialog.getByRole("button", { name: "Keep playing" }).click();
+  await playRun(page, Array(7).fill(WORDS.common));
+  await page.getByRole("button", { name: "Play Alpha Topic again" }).click();
+  await expect(page.locator("#answer")).toBeFocused();
+  await page.waitForTimeout(300);
+  await expect(dialog).toHaveCount(0);
+});
+
+test("the quit dialog keeps keyboard focus where the player puts it", async ({ page }) => {
+  await startTopic(page);
+  await page.getByRole("button", { name: /Quit/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Leave this run?" });
+  await expect(dialog.getByRole("button", { name: "Keep playing" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Leave" })).toBeFocused();
+  // The play screen re-renders every timer tick; focus must not jump back.
+  await page.waitForTimeout(500);
+  await expect(dialog.getByRole("button", { name: "Leave" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Play Alpha Topic" })).toBeVisible();
+});
+
+test("a first score of 0 is saved but not celebrated as a new best", async ({ page }) => {
+  await startTopic(page);
+  await playRun(page, Array(7).fill(WORDS.miss));
+  await expect(page.getByTestId("final-score")).toHaveText("0");
+  await expect(page.getByText("New best")).toHaveCount(0);
+  await page.getByRole("button", { name: "Choose another topic" }).click();
+  await expect(page.getByRole("button", { name: "Play Alpha Topic" })).toContainText("Best 0/21");
+});
+
+test("the quit dialog only mentions the timer while it is running", async ({ page }) => {
+  await startTopic(page);
+  const dialog = page.getByRole("dialog", { name: "Leave this run?" });
+  await page.getByRole("button", { name: /Quit/ }).click();
+  await expect(dialog).toContainText("The timer keeps running");
+  await dialog.getByRole("button", { name: "Keep playing" }).click();
+  await answer(page, WORDS.common);
+  await page.getByRole("button", { name: /Quit/ }).click();
+  await expect(dialog).not.toContainText("timer");
+});

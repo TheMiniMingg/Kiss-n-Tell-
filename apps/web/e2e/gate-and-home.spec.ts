@@ -43,10 +43,10 @@ test("how to play opens and closes", async ({ page }) => {
   await expect(page.locator("#rules")).toHaveCount(0);
 });
 
-test("footer links to the source code and downloads", async ({ page }) => {
+test("footer links to the source code (no downloads link until a release exists)", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Source code on GitHub" })).toHaveAttribute("href", /github\.com\/TheMiniMingg\/Kiss-n-Tell-/);
-  await expect(page.getByRole("link", { name: "Desktop downloads" })).toHaveAttribute("href", /releases/);
+  await expect(page.getByRole("link", { name: "Desktop downloads" })).toHaveCount(0);
 });
 
 test("shows an error and recovers when content fails to load", async ({ page }) => {

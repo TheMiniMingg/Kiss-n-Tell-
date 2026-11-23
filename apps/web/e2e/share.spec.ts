@@ -38,3 +38,16 @@ test("the share card is a 1080x1350 image", async ({ page }) => {
   expect(buf.readUInt32BE(16)).toBe(1080);
   expect(buf.readUInt32BE(20)).toBe(1350);
 });
+
+test("if the browser refuses the clipboard, Copy downloads the image instead", async ({ page }, info) => {
+  test.skip(info.project.name === "phone", "Clipboard images are a desktop feature in Chromium");
+  await page.addInitScript(() => {
+    navigator.clipboard.write = () => Promise.reject(new DOMException("Denied", "NotAllowedError"));
+  });
+  await startTopic(page);
+  await playRun(page, Array(7).fill(WORDS.common));
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Copy image" }).click();
+  await downloadPromise;
+  await expect(page.getByText("Copying isn't supported here, so the image was downloaded.")).toBeVisible();
+});
