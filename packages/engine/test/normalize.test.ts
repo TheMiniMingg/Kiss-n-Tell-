@@ -14,6 +14,12 @@ describe("normalizeAnswer", () => {
     expect(normalizeAnswer("Café")).toBe("café");
     expect(normalizeAnswer("Café")).not.toBe("cafe");
   });
+  it("treats phone smart punctuation as plain apostrophes and hyphens", () => {
+    expect(normalizeAnswer("O\u2019Neill")).toBe("o'neill");
+    expect(normalizeAnswer("O\u2018Neill")).toBe("o'neill");
+    expect(normalizeAnswer("aye\u2010aye")).toBe("aye-aye");
+    expect(normalizeAnswer("aye\u2011aye")).toBe("aye-aye");
+  });
   it("treats composed and decomposed accents as the same word", () => {
     expect(normalizeAnswer("cafe\u0301")).toBe(normalizeAnswer("caf\u00e9"));
   });

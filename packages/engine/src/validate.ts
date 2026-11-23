@@ -1,4 +1,4 @@
-import { checkWord, normalizeAnswer } from "./normalize.js";
+import { checkWord, graphemeLength, MAX_ANSWER_LENGTH, normalizeAnswer } from "./normalize.js";
 import {
   MAX_TIMER_SECONDS,
   MIN_TIMER_SECONDS,
@@ -50,6 +50,10 @@ export function validateQuestion(q: Question, where: string): Issue[] {
       else if (problem === "multiple_words") err(`"${raw}" (${tier}) has more than one word. Answers must be a single word.`);
       else if (problem === "too_short") err(`"${raw}" (${tier}) is one letter. Answers need at least 2 characters.`);
       if (problem) continue;
+      if (graphemeLength(norm) > MAX_ANSWER_LENGTH) {
+        err(`"${raw}" (${tier}) is longer than ${MAX_ANSWER_LENGTH} characters, so players can't type it.`);
+        continue;
+      }
       const prev = seen.get(norm);
       if (prev === tier) err(`"${raw}" is listed twice in ${tier}.`);
       else if (prev) err(`"${raw}" is in both ${prev} and ${tier}. Pick one tier.`);

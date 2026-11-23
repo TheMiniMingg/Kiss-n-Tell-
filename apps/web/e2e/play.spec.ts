@@ -1,4 +1,4 @@
-import { answer, expect, next, playRun, score, stageSrc, startTopic, test, WORDS } from "./fixtures";
+import { answer, expect, MANIFEST, next, playRun, score, stageSrc, startTopic, test, WORDS } from "./fixtures";
 
 test("rejected inputs don't use up the question", async ({ page }) => {
   await startTopic(page);
@@ -138,4 +138,19 @@ test("a missing stage image shows a placeholder instead of a broken image", asyn
   await startTopic(page);
   await answer(page, WORDS.common);
   await expect(page.getByRole("img", { name: "Image unavailable" })).toBeVisible();
+});
+
+test("a curly apostrophe or Unicode hyphen from a phone keyboard still matches", async ({ page }) => {
+  const manifest = structuredClone(MANIFEST);
+  for (const q of manifest.topics[0]!.questions) q.answers.legendary.push("o'neill", "aye-aye");
+  // Registered last, so it overrides the default manifest mock.
+  await page.route("**/content/manifest.json", (route) =>
+    route.fulfill({ contentType: "application/json", body: JSON.stringify(manifest) }),
+  );
+  await startTopic(page);
+  await answer(page, "O\u2019Neill");
+  await expect(page.getByTestId("result")).toContainText("Legendary+3");
+  await next(page);
+  await answer(page, "aye\u2011aye");
+  await expect(page.getByTestId("result")).toContainText("Legendary+3");
 });

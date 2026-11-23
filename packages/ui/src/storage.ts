@@ -33,11 +33,11 @@ export const storage = {
   },
   setSeen: (topicId: string, ids: string[]) => write(`seen:${topicId}`, ids),
   getBest: (topicId: string) => read<BestScore | null>(`best:${topicId}`, null),
-  /** Saves and returns true when this is a new best. */
+  /** Saves the score when it beats the best. Returns true when it is worth celebrating as a new best (above 0). */
   recordScore: (topicId: string, score: number, won: boolean): boolean => {
     const prev = read<BestScore | null>(`best:${topicId}`, null);
     if (prev && prev.score >= score) return false;
     write(`best:${topicId}`, { score, won, at: Date.now() } satisfies BestScore);
-    return true;
+    return score > 0;
   },
 };

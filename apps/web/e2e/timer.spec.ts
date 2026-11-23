@@ -46,3 +46,16 @@ test("the next question gets a fresh timer", async ({ page }) => {
   await page.getByTestId("result").getByRole("button").click();
   await expect(page.getByRole("timer")).toHaveAccessibleName("20 seconds left");
 });
+
+test("after a timeout the next question starts with an empty box and no old warning", async ({ page }) => {
+  await startTopic(page);
+  await page.locator("#answer").fill("a");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("alert")).toBeVisible();
+  await page.clock.fastForward(21_000);
+  await expect(page.getByTestId("result")).toContainText("Time's up");
+  await page.clock.fastForward(1_000);
+  await page.getByTestId("result").getByRole("button").click();
+  await expect(page.locator("#answer")).toHaveValue("");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});

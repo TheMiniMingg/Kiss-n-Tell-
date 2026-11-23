@@ -99,6 +99,12 @@ describe("validation", () => {
       expect(isSafeRelativePath(p)).toBe(false);
     }
   });
+  it("blocks answers too long to type in the game", () => {
+    const long = "a".repeat(41);
+    const issues = validateQuestion(makeQuestion("q", { answers: { common: [long, "ok"], rare: [], legendary: [] } }), "q");
+    expect(issues.some((i) => i.level === "error" && /longer than 40/.test(i.message))).toBe(true);
+    expect(hasErrors(validateQuestion(makeQuestion("q", { answers: { common: ["a".repeat(40)], rare: [], legendary: [] } }), "q"))).toBe(false);
+  });
   it("checks timer bounds", () => {
     expect(hasErrors(validateQuestion(makeQuestion("q", { timerSeconds: 2 }), "q"))).toBe(true);
     expect(hasErrors(validateQuestion(makeQuestion("q", { timerSeconds: 20 }), "q"))).toBe(false);
