@@ -1,0 +1,7 @@
+{
+  "id": "animals",
+  "title": "Animals",
+  "description": "Cats, dogs, birds, bugs and everything in between.",
+  "order": 3,
+  "sample": true
+}
