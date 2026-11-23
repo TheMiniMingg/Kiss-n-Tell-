@@ -21,6 +21,8 @@ pnpm dev          # builds content, starts the web game at http://localhost:5173
 pnpm build        # production build in apps/web/dist
 pnpm check        # typecheck + unit tests + content validation
 pnpm test:e2e     # browser tests (needs a Playwright Chromium)
+pnpm test:e2e:desktop  # browser tests for the desktop pack editor
+pnpm desktop:dev  # desktop app with hot reload (needs Rust + Tauri prerequisites)
 ```
 
 ## Adding content
@@ -42,6 +44,7 @@ See [docs/content-guide.md](docs/content-guide.md) for the CSV format, image rul
 
 ```
 apps/web/            Website (Vite + React), preset play only
+apps/desktop/        Desktop app (Tauri v2): the same game plus an offline pack editor
 packages/engine/     Game rules: scoring, answer matching, question draw, timer, validation (unit-tested, no UI)
 packages/ui/         React screens and components shared by web and desktop
 content/presets/     Topics, questions and character art
@@ -49,7 +52,15 @@ scripts/             Content build/validation and placeholder art generator
 docs/                Content guide and design notes
 ```
 
-The desktop app (Tauri, with an offline pack editor) is planned to share `packages/engine` and `packages/ui`.
+## Desktop app
+
+The desktop app plays the same presets and adds a pack editor: make your own topics (questions, character, 11 stage images), check them, preview a run, and import or export them as ZIP files. Packs are saved in the app's data folder and show up on the topic list as "My pack".
+
+- **Download:** installers for Windows and macOS are attached to each [GitHub Release](https://github.com/TheMiniMingg/Kiss-n-Tell-/releases). They are unsigned, so Windows SmartScreen and macOS Gatekeeper will warn the first time; see [apps/desktop/README.md](apps/desktop/README.md#installing-the-unsigned-builds).
+- **Run from source:** `pnpm desktop:dev` (needs Rust and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)).
+- **Editor in a browser:** `pnpm --filter @kiss-n-tell/desktop dev:frontend` runs the editor without the native shell, storing packs in the browser.
+
+See [apps/desktop/README.md](apps/desktop/README.md) for the pack format, where packs are stored, and how releases are built.
 
 ## Licenses
 
