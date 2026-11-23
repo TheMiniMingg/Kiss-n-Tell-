@@ -2,7 +2,7 @@ import type { Issue } from "@kiss-n-tell/engine";
 import type { GameTopic } from "@kiss-n-tell/ui";
 import { measureAll, type ImageUrls } from "./images.js";
 import { isPlayable, packFromFiles, packToTopic, validatePack, type PackDraft } from "./pack/index.js";
-import type { PackStore } from "./store/index.js";
+import type { PackStore } from "./store.js";
 
 export interface SavedPack {
   /** Folder (storage key) it was loaded from. Usually equals pack.topic.id. */

@@ -1,24 +1,27 @@
-import { MAX_SCORE, QUESTIONS_PER_RUN, WIN_SCORE } from "@kiss-n-tell/engine";
+import { MAX_SCORE, QUESTIONS_PER_RUN, WIN_SCORE, type SiteConfig } from "@kiss-n-tell/engine";
 import { useState } from "react";
 import type { GameTopic } from "../content.js";
 import { storage } from "../storage.js";
-import type { AppLinks } from "../App.js";
+import type { AppLinks, EditorEntry } from "../App.js";
+import { SupportLinks } from "../components/SupportLinks.js";
 
 interface Props {
   topics: GameTopic[];
   links?: AppLinks;
+  site: SiteConfig;
   onPlay: (topic: GameTopic) => void;
-  /** Desktop only: open the pack editor. */
-  onOpenEditor?: () => void;
+  /** Open the editor (desktop pack editor, or the website's owner mode). */
+  editor?: EditorEntry & { open: () => void };
 }
 
-export function Home({ topics, links, onPlay, onOpenEditor }: Props) {
+export function Home({ topics, links, site, onPlay, editor }: Props) {
   const [showRules, setShowRules] = useState(false);
+  const { text } = site;
   return (
     <main className="home">
       <header className="home__hero">
-        <h1 className="logo">Kiss N Tell</h1>
-        <p className="home__tagline">Name the rarest answer you can. {QUESTIONS_PER_RUN} questions, 10 stages, one guess each.</p>
+        <h1 className="logo">{text.title}</h1>
+        {text.tagline && <p className="home__tagline">{text.tagline}</p>}
         <button className="link-btn" aria-expanded={showRules} aria-controls="rules" onClick={() => setShowRules((s) => !s)}>
           {showRules ? "Hide how to play" : "How to play"}
         </button>
@@ -38,9 +41,9 @@ export function Home({ topics, links, onPlay, onOpenEditor }: Props) {
 
       <section aria-labelledby="topics-title">
         <div className="home__topics-head">
-          <h2 id="topics-title" className="section-title">Choose a topic</h2>
-          {onOpenEditor && (
-            <button className="btn btn--ghost btn--small" onClick={onOpenEditor}>Make your own packs</button>
+          <h2 id="topics-title" className="section-title">{text.topicsHeading || "Choose a topic"}</h2>
+          {editor?.placement === "topics" && (
+            <button className="btn btn--ghost btn--small" onClick={editor.open}>{editor.label}</button>
           )}
         </div>
         {topics.length === 0 ? (
@@ -80,13 +83,16 @@ export function Home({ topics, links, onPlay, onOpenEditor }: Props) {
         )}
       </section>
 
-      {links && (
-        <footer className="footer">
-          {links.source && <a href={links.source} target="_blank" rel="noreferrer">Source code on GitHub</a>}
-          {links.downloads && <a href={links.downloads} target="_blank" rel="noreferrer">Desktop downloads</a>}
-          <span className="muted">All characters are fictional adults.</span>
-        </footer>
-      )}
+      <SupportLinks site={site} />
+
+      <footer className="footer">
+        {links?.source && <a href={links.source} target="_blank" rel="noreferrer">Source code on GitHub</a>}
+        {links?.downloads && <a href={links.downloads} target="_blank" rel="noreferrer">Desktop downloads</a>}
+        {text.footerNote && <span className="muted">{text.footerNote}</span>}
+        {editor?.placement === "footer" && (
+          <button type="button" className="link-btn footer__edit" onClick={editor.open}>{editor.label}</button>
+        )}
+      </footer>
     </main>
   );
 }

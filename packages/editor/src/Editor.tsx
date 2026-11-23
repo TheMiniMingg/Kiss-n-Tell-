@@ -1,7 +1,7 @@
 import { STAGE_COUNT, questionsFromCsv, questionsToCsv, type Issue } from "@kiss-n-tell/engine";
 import { Modal, loadManifest, type GameTopic } from "@kiss-n-tell/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ImageUrls, imageExtOf, measureAll, measureImage, placeImages } from "../images.js";
+import { ImageUrls, imageExtOf, measureAll, measureImage, placeImages } from "./images.js";
 import {
   PackZipError,
   ZIP_LIMITS,
@@ -18,23 +18,32 @@ import {
   validatePack,
   type PackDraft,
   type StageImage,
-} from "../pack/index.js";
-import { packGameTopic, packIssues, type LoadResult, type SavedPack } from "../packs.js";
-import type { PackStore } from "../store/index.js";
+} from "./pack/index.js";
+import { packGameTopic, packIssues, type LoadResult, type SavedPack } from "./packs.js";
+import type { PackStore } from "./store.js";
 import { ImagesPanel } from "./ImagesPanel.js";
 import { IssueList, countIssues, issueTarget, type EditorTab } from "./IssueList.js";
 import { PreviewRun } from "./PreviewRun.js";
 import { QuestionsPanel } from "./QuestionsPanel.js";
 import { TopicForm } from "./TopicForm.js";
 
+/**
+ * "local": the desktop app's own packs, listed as "My pack" next to the built-in topics.
+ * "site": the website's owner mode, where every pack is one of the game's topics.
+ */
+export type EditorVariant = "local" | "site";
+
 interface Props {
   store: PackStore;
+  variant?: EditorVariant;
   saved: LoadResult;
   loadError: string | null;
   /** Built-in topics, for id clash warnings and "copy a built-in topic". */
   presets: { id: string; title: string }[];
   reload: () => Promise<void>;
   onClose: () => void;
+  /** Told whenever the open pack gains or loses unsaved changes, so the host can ask before leaving. */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 interface OpenPack {
@@ -66,7 +75,8 @@ async function readFile(file: File): Promise<Uint8Array> {
   return new Uint8Array(await file.arrayBuffer());
 }
 
-export function Editor({ store, saved, loadError, presets, reload, onClose }: Props) {
+export function Editor({ store, variant = "local", saved, loadError, presets, reload, onClose, onDirtyChange }: Props) {
+  const site = variant === "site";
   const presetIds = useMemo(() => presets.map((p) => p.id), [presets]);
   const [open, setOpen] = useState<OpenPack | null>(null);
   const [tab, setTab] = useState<EditorTab>("topic");
@@ -87,6 +97,7 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
   }, [store]);
 
   const dirty = !!open && open.version !== open.savedVersion;
+  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
   const otherIds = useMemo(
     () => saved.packs.filter((p) => p.folder !== open?.folder).map((p) => p.pack.topic.id),
     [saved.packs, open?.folder],
@@ -234,20 +245,28 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
     }
     setBusy(true);
     try {
-      await store.save(id, packToFiles(open.draft), open.folder);
+      const playable = isPlayable(issues);
+      const folder = (await store.save(id, packToFiles(open.draft), open.folder, { playable })) || id;
       const version = open.version;
-      setOpen((o) => (o ? { ...o, folder: id, savedVersion: version, idLinked: false, charIdLinked: false } : o));
+      setOpen((o) => (o ? { ...o, folder, savedVersion: version, idLinked: false, charIdLinked: false } : o));
       await reload();
+      const fix = `Fix ${counts.errors} error${counts.errors === 1 ? "" : "s"} to make it playable.`;
       setStatus({
         tone: "ok",
-        text: isPlayable(issues) ? "Saved. It's on the topic list as \"My pack\"." : `Saved. Fix ${counts.errors} error${counts.errors === 1 ? "" : "s"} to make it playable.`,
+        text: site
+          ? playable
+            ? "Saved to the site. Players see it after the next deploy (usually 1 to 2 minutes)."
+            : `Saved as a hidden draft. ${fix}`
+          : playable
+            ? "Saved. It's on the topic list as \"My pack\"."
+            : `Saved. ${fix}`,
       });
     } catch (e) {
       setStatus({ tone: "error", text: `Could not save: ${(e as Error).message}` });
     } finally {
       setBusy(false);
     }
-  }, [open, busy, store, reload, issues, counts.errors]);
+  }, [open, busy, store, reload, issues, counts.errors, site]);
 
   // Ctrl+S / Cmd+S saves.
   useEffect(() => {
@@ -263,32 +282,28 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
 
   // Native window: ask before closing with unsaved work.
   useEffect(() => {
-    if (!dirty || store.kind !== "tauri") return;
+    if (!dirty || !store.onCloseRequested) return;
     let unlisten: (() => void) | undefined;
     let cancelled = false;
-    void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
-      const win = getCurrentWindow();
-      void win
-        .onCloseRequested((event) => {
-          event.preventDefault();
-          setPending({
-            title: "Quit with unsaved changes?",
-            body: `"${openRef.current?.draft.topic.title || "This pack"}" has changes that haven't been saved.`,
-            confirm: "Quit without saving",
-            danger: true,
-            run: () => void win.destroy(),
-          });
-        })
-        .then((fn) => {
-          if (cancelled) fn();
-          else unlisten = fn;
-        });
-    });
+    void store
+      .onCloseRequested((quit) =>
+        setPending({
+          title: "Quit with unsaved changes?",
+          body: `"${openRef.current?.draft.topic.title || "This pack"}" has changes that haven't been saved.`,
+          confirm: "Quit without saving",
+          danger: true,
+          run: quit,
+        }),
+      )
+      .then((fn) => {
+        if (cancelled) fn();
+        else unlisten = fn;
+      });
     return () => {
       cancelled = true;
       unlisten?.();
     };
-  }, [dirty, store.kind]);
+  }, [dirty, store]);
 
   // Warn before the window closes with unsaved work (browser builds).
   useEffect(() => {
@@ -323,7 +338,9 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
     setPending({
       title: "Delete this pack?",
       body: folder
-        ? `"${draft.topic.title || folder}" will be removed from your packs.${store.kind === "tauri" ? " A copy is kept in the app's trash folder." : ""}`
+        ? site
+          ? `"${draft.topic.title || folder}" will be removed from the site. Git history keeps a copy.`
+          : `"${draft.topic.title || folder}" will be removed from your packs.${store.kind === "tauri" ? " A copy is kept in the app's trash folder." : ""}`
         : "This pack hasn't been saved, so it will be discarded.",
       confirm: "Delete pack",
       danger: true,
@@ -332,7 +349,7 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
           if (folder) await store.remove(folder);
           setOpen(null);
           await reload();
-          setStatus({ tone: "ok", text: "Pack deleted." });
+          setStatus({ tone: "ok", text: site ? "Topic deleted. The site updates after the next deploy." : "Pack deleted." });
         } catch (e) {
           setStatus({ tone: "error", text: `Could not delete: ${(e as Error).message}` });
         }
@@ -439,11 +456,11 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
 
   return (
     <div className="ed">
-      <aside className="ed-side" aria-label="Your packs">
+      <aside className="ed-side" aria-label={site ? "Topics" : "Your packs"}>
         <button type="button" className="btn btn--ghost btn--small ed-back" onClick={() => guard(onClose)}>
           ← Back to game
         </button>
-        <h2 className="ed-side__title">Your packs</h2>
+        <h2 className="ed-side__title">{site ? "Topics" : "Your packs"}</h2>
         <div className="ed-side__tools">
           <button type="button" className="btn btn--primary btn--small" onClick={() => guard(() => setNewDialog(true))} disabled={busy}>New pack</button>
           <button type="button" className="btn btn--ghost btn--small" onClick={() => guard(() => zipInput.current?.click())} disabled={busy}>Import ZIP…</button>
@@ -465,13 +482,13 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
           <p key={f.folder} className="ed-status ed-status--error">Could not read "{f.folder}": {f.message}</p>
         ))}
         {saved.packs.length === 0 && !open ? (
-          <p className="ed-empty">No packs yet. Start a new one, copy a built-in topic, or import a pack ZIP.</p>
+          <p className="ed-empty">{site ? "No topics yet. Start a new one or import a pack ZIP." : "No packs yet. Start a new one, copy a built-in topic, or import a pack ZIP."}</p>
         ) : (
           <ul className="ed-packs">
             {open && open.folder === null && (
               <li>
                 <button type="button" className="ed-pack ed-pack--on" aria-current="true">
-                  <span className="ed-pack__title">{open.draft.topic.title || "Untitled pack"}</span>
+                  <span className="ed-pack__title">{open.draft.topic.title || (site ? "Untitled topic" : "Untitled pack")}</span>
                   <span className="ed-pack__meta">Not saved yet</span>
                 </button>
               </li>
@@ -479,6 +496,7 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
             {saved.packs.map((p) => {
               const c = countIssues(packIssues(p, saved.packs, presetIds));
               const isOpen = open?.folder === p.folder;
+              const hidden = site && p.folder.startsWith("_");
               return (
                 <li key={p.folder}>
                   <button
@@ -493,7 +511,7 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
                     </span>
                     <span className="ed-pack__meta">
                       {p.pack.questions.length} questions · {p.pack.images.filter(Boolean).length}/{STAGE_COUNT} images ·{" "}
-                      {c.errors ? <span className="ed-bad">{c.errors} error{c.errors === 1 ? "" : "s"}</span> : <span className="ed-good">Playable</span>}
+                      {c.errors ? <span className="ed-bad">{c.errors} error{c.errors === 1 ? "" : "s"}</span> : hidden ? <span className="ed-bad">Hidden draft</span> : <span className="ed-good">Playable</span>}
                     </span>
                   </button>
                 </li>
@@ -516,11 +534,19 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
       <main className="ed-main">
         {!open ? (
           <div className="ed-welcome">
-            <h1 className="ed-welcome__title">Pack editor</h1>
-            <p className="muted">
-              A pack is one topic: a question pool (at least 7, each run draws 7 at random), a character, and 11 stage images from 00 (start) to 10 (ending).
-              Saved packs with no errors show up on the topic list as "My pack". Export a pack as a ZIP to share it or to add it to the game's presets.
-            </p>
+            <h1 className="ed-welcome__title">{site ? "Topic editor" : "Pack editor"}</h1>
+            {site ? (
+              <p className="muted">
+                Pick a topic on the left to change its questions, answers, character or images, or start a new one. Each topic needs a question pool
+                (at least 7, each run draws 7 at random), a character, and 11 stage images from 00 (start) to 10 (ending). Saving commits the change
+                to the game's content on GitHub and the live site updates after the deploy. Topics with errors are saved as hidden drafts.
+              </p>
+            ) : (
+              <p className="muted">
+                A pack is one topic: a question pool (at least 7, each run draws 7 at random), a character, and 11 stage images from 00 (start) to 10 (ending).
+                Saved packs with no errors show up on the topic list as "My pack". Export a pack as a ZIP to share it or to add it to the game's presets.
+              </p>
+            )}
             <div className="ed-row">
               <button type="button" className="btn btn--primary" onClick={() => setNewDialog(true)}>New pack</button>
               <button type="button" className="btn btn--ghost" onClick={() => zipInput.current?.click()}>Import ZIP…</button>
@@ -595,7 +621,9 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
                   <p className={counts.errors ? "ed-bad" : "ed-good"}>
                     {counts.errors
                       ? `${counts.errors} error${counts.errors === 1 ? "" : "s"} to fix before this pack can be played.`
-                      : "Ready to play. Save it and it appears on the topic list."}
+                      : site
+                        ? "Ready to play. Save it and it appears on the site after the next deploy."
+                        : "Ready to play. Save it and it appears on the topic list."}
                     {counts.warnings > 0 && ` ${counts.warnings} warning${counts.warnings === 1 ? "" : "s"} (optional to fix).`}
                   </p>
                   <IssueList issues={issues} onGo={goToIssue} empty="No problems found." />
@@ -622,7 +650,7 @@ export function Editor({ store, saved, loadError, presets, reload, onClose }: Pr
           onClose={() => setNewDialog(false)}
           actions={<button type="button" className="btn btn--ghost" onClick={() => setNewDialog(false)}>Cancel</button>}
         >
-          <p>Start from scratch, or copy a built-in topic and change it.</p>
+          <p>{presets.length ? "Start from scratch, or copy a built-in topic and change it." : "Start from scratch, or import a pack ZIP from the side bar."}</p>
           <div className="ed-newlist">
             <button type="button" className="btn btn--primary" data-autofocus onClick={newBlank}>Blank pack</button>
             {presets.map((p) => (

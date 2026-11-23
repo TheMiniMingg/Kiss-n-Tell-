@@ -1,5 +1,4 @@
-import type { PackFiles } from "../pack/index.js";
-import { StoreError, type PackStore } from "./types.js";
+import { StoreError, type PackFiles, type PackStore } from "@kiss-n-tell/editor";
 
 /**
  * IndexedDB store used when the editor runs in a plain browser

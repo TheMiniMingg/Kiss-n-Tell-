@@ -1,8 +1,6 @@
 import { App, loadManifest } from "@kiss-n-tell/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Editor } from "./editor/Editor.js";
-import { ImageUrls } from "./images.js";
-import { loadAllPacks, playableTopics, type LoadResult } from "./packs.js";
+import { Editor, ImageUrls, loadAllPacks, playableTopics, type LoadResult } from "@kiss-n-tell/editor";
 import { pickStore } from "./store/index.js";
 
 const CONTENT_URL = "content/manifest.json";

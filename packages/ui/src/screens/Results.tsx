@@ -1,7 +1,8 @@
-import { summarize, type RunState } from "@kiss-n-tell/engine";
+import { summarize, type RunState, type SiteConfig } from "@kiss-n-tell/engine";
 import { useMemo, useRef, useState } from "react";
 import type { GameTopic } from "../content.js";
 import { StageViewer } from "../components/StageViewer.js";
+import { SupportLinks } from "../components/SupportLinks.js";
 import { TierBadge } from "../components/TierBadge.js";
 import {
   canCopyImage,
@@ -17,13 +18,15 @@ interface Props {
   run: RunState;
   isNewBest: boolean;
   siteLabel: string;
+  /** Donate and social links, shown under the actions when set. */
+  site?: SiteConfig;
   onReplay: () => void;
   onHome: () => void;
   /** Host override for saving the card (desktop writes it to Downloads). Resolves to where it was saved. */
   saveFile?: (blob: Blob, filename: string) => Promise<string>;
 }
 
-export function Results({ topic, run, isNewBest, siteLabel, onReplay, onHome, saveFile }: Props) {
+export function Results({ topic, run, isNewBest, siteLabel, site, onReplay, onHome, saveFile }: Props) {
   const summary = useMemo(() => summarize(run), [run]);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -117,6 +120,7 @@ export function Results({ topic, run, isNewBest, siteLabel, onReplay, onHome, sa
             <button className="btn btn--primary" onClick={onReplay}>Play {topic.title} again</button>
             <button className="btn btn--ghost" onClick={onHome}>Choose another topic</button>
           </div>
+          {site && <SupportLinks site={site} compact />}
         </section>
       </div>
     </main>

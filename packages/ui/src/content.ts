@@ -1,4 +1,4 @@
-import type { Character, Topic } from "@kiss-n-tell/engine";
+import { parseSiteConfig, type Character, type SiteConfig, type Topic } from "@kiss-n-tell/engine";
 
 export interface GameCharacter extends Character {
   width?: number;
@@ -14,6 +14,8 @@ export interface GameTopic extends Topic {
 
 export interface Manifest {
   schemaVersion: number;
+  /** Owner-editable text and links. Always filled in (defaults when the manifest has none). */
+  site: SiteConfig;
   topics: GameTopic[];
 }
 
@@ -22,6 +24,7 @@ export async function loadManifest(url: string, signal?: AbortSignal): Promise<M
   if (!res.ok) throw new Error(`Could not load game content (HTTP ${res.status}).`);
   const data = (await res.json()) as Manifest;
   if (!data || !Array.isArray(data.topics)) throw new Error("Game content is malformed.");
+  data.site = parseSiteConfig(data.site).config;
   // Resolve stage paths relative to the manifest so the app works from any base path.
   const base = new URL(url, document.baseURI);
   const root = new URL("..", base);

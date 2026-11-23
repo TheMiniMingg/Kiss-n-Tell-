@@ -1,6 +1,6 @@
 import { DEFAULT_TIMER_SECONDS, MAX_TIMER_SECONDS, MIN_TIMER_SECONDS, validateQuestion, type Issue, type Question } from "@kiss-n-tell/engine";
 import { useMemo, useRef, useState } from "react";
-import { newQuestion, type PackDraft } from "../pack/index.js";
+import { newQuestion, type PackDraft } from "./pack/index.js";
 import { NumberField, TextField, WordListField } from "./fields.js";
 import { IssueList } from "./IssueList.js";
 

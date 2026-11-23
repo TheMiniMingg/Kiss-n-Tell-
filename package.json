@@ -19,7 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "pnpm build && pnpm --filter @kiss-n-tell/web test:e2e",
-    "typecheck": "tsc -p packages/engine && tsc -p packages/ui && tsc -p apps/web && tsc -p apps/desktop && tsc -p scripts",
+    "typecheck": "tsc -p packages/engine && tsc -p packages/ui && tsc -p packages/editor && tsc -p apps/web && tsc -p apps/desktop && tsc -p scripts && tsc -p api",
     "check": "pnpm typecheck && pnpm test && pnpm content:check",
     "desktop:dev": "pnpm --filter @kiss-n-tell/desktop tauri dev",
     "desktop:build": "pnpm --filter @kiss-n-tell/desktop tauri build",

@@ -29,6 +29,9 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@kiss-n-tell/editor':
+        specifier: workspace:*
+        version: link:../../packages/editor
       '@kiss-n-tell/engine':
         specifier: workspace:*
         version: link:../../packages/engine
@@ -69,6 +72,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@kiss-n-tell/editor':
+        specifier: workspace:*
+        version: link:../../packages/editor
       '@kiss-n-tell/engine':
         specifier: workspace:*
         version: link:../../packages/engine
@@ -97,6 +103,31 @@ importers:
       vite:
         specifier: ^5.4.11
         version: 5.4.21(@types/node@22.20.5)
+
+  packages/editor:
+    dependencies:
+      '@kiss-n-tell/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@kiss-n-tell/ui':
+        specifier: workspace:*
+        version: link:../ui
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.3
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.12
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.1
+        version: 18.3.7(@types/react@18.3.31)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
 
   packages/engine: {}
 
