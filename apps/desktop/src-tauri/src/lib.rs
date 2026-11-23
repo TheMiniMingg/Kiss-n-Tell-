@@ -116,6 +116,33 @@ fn open_packs_folder(state: State<'_, AppState>) -> Result<(), String> {
         .map_err(|e| format!("Could not open the folder: {e}"))
 }
 
+/// True for a plain https:// link that is safe to hand to the system browser.
+fn is_openable_url(url: &str) -> bool {
+    url.starts_with("https://")
+        && url.len() <= 2048
+        && !url.chars().any(|c| c.is_whitespace() || c.is_control() || c == '"' || c == '\'' || c == '`')
+}
+
+/// Open an https link (source code, donate, social profiles) in the default browser.
+/// The webview doesn't open new windows on its own.
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    if !is_openable_url(&url) {
+        return Err("Only https links can be opened.".into());
+    }
+    #[cfg(target_os = "windows")]
+    let mut cmd = {
+        let mut c = std::process::Command::new("rundll32");
+        c.arg("url.dll,FileProtocolHandler");
+        c
+    };
+    #[cfg(target_os = "macos")]
+    let mut cmd = std::process::Command::new("open");
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    let mut cmd = std::process::Command::new("xdg-open");
+    cmd.arg(&url).spawn().map(|_| ()).map_err(|e| format!("Could not open the link: {e}"))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -138,7 +165,24 @@ pub fn run() {
             delete_pack,
             save_to_downloads,
             open_packs_folder,
+            open_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Kiss N Tell");
+}
+
+#[cfg(test)]
+mod url_tests {
+    use super::is_openable_url;
+
+    #[test]
+    fn only_plain_https_links_open() {
+        assert!(is_openable_url("https://ko-fi.com/me"));
+        assert!(is_openable_url("https://github.com/TheMiniMingg/Kiss-n-Tell-"));
+        assert!(!is_openable_url("http://example.com"));
+        assert!(!is_openable_url("file:///etc/passwd"));
+        assert!(!is_openable_url("https://x.com/a b"));
+        assert!(!is_openable_url("https://x.com/\"calc"));
+        assert!(!is_openable_url("javascript:alert(1)"));
+    }
 }

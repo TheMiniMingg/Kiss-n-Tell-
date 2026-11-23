@@ -86,6 +86,9 @@ async function readFile(file: File): Promise<Uint8Array> {
 
 export function Editor({ store, variant = "local", saved, loadError, presets, reload, onClose, onDirtyChange }: Props) {
   const site = variant === "site";
+  /** What the author calls one pack: the website edits the game's topics. */
+  const noun = site ? "topic" : "pack";
+  const Noun = site ? "Topic" : "Pack";
   const presetIds = useMemo(() => presets.map((p) => p.id), [presets]);
   const [open, setOpen] = useState<OpenPack | null>(null);
   const [tab, setTab] = useState<EditorTab>("topic");
@@ -136,7 +139,7 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
       if (!dirty) return next();
       setPending({
         title: "Discard unsaved changes?",
-        body: `"${open?.draft.topic.title || "This pack"}" has changes that haven't been saved.`,
+        body: `"${open?.draft.topic.title || `This ${noun}`}" has changes that haven't been saved.`,
         confirm: "Discard changes",
         danger: true,
         run: next,
@@ -189,7 +192,7 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
     setNewDialog(false);
     const draft = newPack("", "");
     draft.character.id = "";
-    startNew(draft, "New pack. Give it a title, then add questions and images.", [], true);
+    startNew(draft, `New ${noun}. Give it a title, then add questions and images.`, [], true);
   };
 
   const newFromPreset = async (presetId: string) => {
@@ -300,7 +303,7 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
       .onCloseRequested((quit) =>
         setPending({
           title: "Quit with unsaved changes?",
-          body: `"${openRef.current?.draft.topic.title || "This pack"}" has changes that haven't been saved.`,
+          body: `"${openRef.current?.draft.topic.title || `This ${noun}`}" has changes that haven't been saved.`,
           confirm: "Quit without saving",
           danger: true,
           run: quit,
@@ -347,13 +350,13 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
     if (!open) return;
     const { folder, draft } = open;
     setPending({
-      title: "Delete this pack?",
+      title: `Delete this ${noun}?`,
       body: folder
         ? site
           ? `"${draft.topic.title || folder}" will be removed from the site. Git history keeps a copy.`
           : `"${draft.topic.title || folder}" will be removed from your packs.${store.kind === "tauri" ? " A copy is kept in the app's trash folder." : ""}`
-        : "This pack hasn't been saved, so it will be discarded.",
-      confirm: "Delete pack",
+        : `This ${noun} hasn't been saved, so it will be discarded.`,
+      confirm: `Delete ${noun}`,
       danger: true,
       run: async () => {
         try {
@@ -447,7 +450,7 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
     else
       setPending({
         title: "Replace or add questions?",
-        body: `${file.name} has ${questions.length} questions. Replace the ${open.draft.questions.length} questions in this pack, or add them after the ones you have?`,
+        body: `${file.name} has ${questions.length} questions. Replace the ${open.draft.questions.length} questions in this ${noun}, or add them after the ones you have?`,
         confirm: "Replace all",
         danger: true,
         run: () => apply("replace"),
@@ -512,12 +515,15 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
       }}
     >
       <aside className="ed-side" aria-label={site ? "Topics" : "Your packs"}>
-        <button type="button" className="btn btn--ghost btn--small ed-back" onClick={() => guard(onClose)}>
-          ← Back to game
-        </button>
+        {!site && (
+          // The website's owner bar has its own Back to game.
+          <button type="button" className="btn btn--ghost btn--small ed-back" onClick={() => guard(onClose)}>
+            ← Back to game
+          </button>
+        )}
         <h2 className="ed-side__title">{site ? "Topics" : "Your packs"}</h2>
         <div className="ed-side__tools">
-          <button type="button" className="btn btn--primary btn--small" onClick={() => guard(() => setNewDialog(true))} disabled={busy}>New pack</button>
+          <button type="button" className="btn btn--primary btn--small" onClick={() => guard(() => setNewDialog(true))} disabled={busy}>New {noun}</button>
           <button type="button" className="btn btn--ghost btn--small" onClick={() => guard(() => zipInput.current?.click())} disabled={busy}>Import ZIP…</button>
           <input
             ref={zipInput}
@@ -603,7 +609,7 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
               </p>
             )}
             <div className="ed-row">
-              <button type="button" className="btn btn--primary" onClick={() => setNewDialog(true)}>New pack</button>
+              <button type="button" className="btn btn--primary" onClick={() => setNewDialog(true)}>New {noun}</button>
               <button type="button" className="btn btn--ghost" onClick={() => zipInput.current?.click()}>Import ZIP…</button>
             </div>
             {status && <p className={`ed-status ed-status--${status.tone}`} role="status">{status.text}</p>}
@@ -612,7 +618,7 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
           <>
             <header className="ed-head">
               <div className="ed-head__title">
-                <h1>{open.draft.topic.title || "Untitled pack"}</h1>
+                <h1>{open.draft.topic.title || `Untitled ${noun}`}</h1>
                 <span className={`pill ${dirty ? "pill--dirty" : ""}`}>{open.folder === null ? "Not saved" : dirty ? "Unsaved changes" : "Saved"}</span>
                 <span className={`pill ${counts.errors ? "pill--bad" : "pill--good"}`}>
                   {counts.errors ? `${counts.errors} error${counts.errors === 1 ? "" : "s"}` : "Playable"}
@@ -622,7 +628,7 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
                 <button type="button" className="btn btn--primary btn--small" onClick={() => void save()} disabled={busy || (!dirty && open.folder !== null)} title="Ctrl+S">
                   Save
                 </button>
-                <button type="button" className="btn btn--ghost btn--small" onClick={startPreview} disabled={!canPreview} title={canPreview ? "Play a run of this pack" : "Add a question with a prompt and answers first"}>
+                <button type="button" className="btn btn--ghost btn--small" onClick={startPreview} disabled={!canPreview} title={canPreview ? `Play a run of this ${noun}` : "Add a question with a prompt and answers first"}>
                   Preview run
                 </button>
                 <button type="button" className="btn btn--ghost btn--small" onClick={() => void exportZip()} disabled={busy}>Export ZIP</button>
@@ -630,7 +636,7 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
               </div>
             </header>
             {status && <p className={`ed-status ed-status--${status.tone}`} role="status">{status.text}</p>}
-            <nav className="ed-tabs" role="tablist" aria-label="Pack sections">
+            <nav className="ed-tabs" role="tablist" aria-label={`${Noun} sections`}>
               {TABS.map((t) => {
                 const n =
                   t.id === "questions" ? open.draft.questions.length : t.id === "images" ? `${open.draft.images.filter(Boolean).length}/${STAGE_COUNT}` : t.id === "check" ? counts.errors + counts.warnings : null;
@@ -685,7 +691,7 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
                 <div className="ed-check">
                   <p className={counts.errors ? "ed-bad" : "ed-good"}>
                     {counts.errors
-                      ? `${counts.errors} error${counts.errors === 1 ? "" : "s"} to fix before this pack can be played.`
+                      ? `${counts.errors} error${counts.errors === 1 ? "" : "s"} to fix before this ${noun} can be played.`
                       : site
                         ? "Ready to play. Save it and it appears on the site after the next deploy."
                         : "Ready to play. Save it and it appears on the topic list."}
@@ -713,13 +719,13 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
 
       {newDialog && (
         <Modal
-          title="New pack"
+          title={`New ${noun}`}
           onClose={() => setNewDialog(false)}
           actions={<button type="button" className="btn btn--ghost" onClick={() => setNewDialog(false)}>Cancel</button>}
         >
           <p>{presets.length ? "Start from scratch, or copy a built-in topic and change it." : "Start from scratch, or import a pack ZIP from the side bar."}</p>
           <div className="ed-newlist">
-            <button type="button" className="btn btn--primary" data-autofocus onClick={newBlank}>Blank pack</button>
+            <button type="button" className="btn btn--primary" data-autofocus onClick={newBlank}>Blank {noun}</button>
             {presets.map((p) => (
               <button key={p.id} type="button" className="btn btn--ghost" onClick={() => void newFromPreset(p.id)}>Copy “{p.title}”</button>
             ))}
