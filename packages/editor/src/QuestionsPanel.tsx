@@ -1,5 +1,5 @@
 import { DEFAULT_TIMER_SECONDS, MAX_TIMER_SECONDS, MIN_TIMER_SECONDS, validateQuestion, type Issue, type Question } from "@kiss-n-tell/engine";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { newQuestion, type PackDraft } from "./pack/index.js";
 import { NumberField, TextField, WordListField } from "./fields.js";
 import { IssueList } from "./IssueList.js";
@@ -20,6 +20,7 @@ function questionIssues(q: Question): Issue[] {
 export function QuestionsPanel({ draft, selected, onSelect, onChange, onImportCsv, onExportCsv }: Props) {
   const [filter, setFilter] = useState("");
   const csvInput = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLOListElement>(null);
   const questions = draft.questions;
   const current = questions[selected];
   const issuesById = useMemo(() => new Map(questions.map((q) => [q.id, questionIssues(q)])), [questions]);
@@ -29,6 +30,11 @@ export function QuestionsPanel({ draft, selected, onSelect, onChange, onImportCs
     for (const q of questions) (seen.has(q.id) ? dup : seen).add(q.id);
     return dup;
   }, [questions]);
+
+  // Keep the selected question in view (after adding, importing or moving).
+  useEffect(() => {
+    listRef.current?.querySelector<HTMLElement>("[aria-current='true']")?.scrollIntoView({ block: "nearest" });
+  }, [selected, questions.length]);
 
   const visible = questions
     .map((q, i) => ({ q, i }))
@@ -118,7 +124,7 @@ export function QuestionsPanel({ draft, selected, onSelect, onChange, onImportCs
         {questions.length === 0 ? (
           <p className="ed-empty">No questions yet. Add one, or import a questions.csv written in a spreadsheet.</p>
         ) : (
-          <ol className="ed-qlist__items">
+          <ol className="ed-qlist__items" ref={listRef}>
             {visible.map(({ q, i }) => {
               const iss = issuesById.get(q.id) ?? [];
               const hasError = iss.some((x) => x.level === "error") || dupIds.has(q.id);

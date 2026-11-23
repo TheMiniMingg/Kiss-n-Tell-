@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 interface Props {
   topic: GameTopic;
   onClose: () => void;
+  /** Saves the share card (desktop: to Downloads). */
+  saveFile?: (blob: Blob, filename: string) => Promise<string>;
 }
 
 type View = { kind: "play"; run: RunState; key: number } | { kind: "results"; run: RunState };
@@ -15,7 +17,7 @@ function newRun(topic: GameTopic): View {
 }
 
 /** A real run of the pack being edited, using the game's own screens. Nothing is recorded. */
-export function PreviewRun({ topic, onClose }: Props) {
+export function PreviewRun({ topic, onClose, saveFile }: Props) {
   const [view, setView] = useState<View>(() => newRun(topic));
   const replay = useCallback(() => setView(newRun(topic)), [topic]);
 
@@ -41,7 +43,7 @@ export function PreviewRun({ topic, onClose }: Props) {
           onQuit={onClose}
         />
       ) : (
-        <Results topic={topic} run={view.run} isNewBest={false} siteLabel="Kiss N Tell" onReplay={replay} onHome={onClose} />
+        <Results topic={topic} run={view.run} isNewBest={false} siteLabel="Kiss N Tell" onReplay={replay} onHome={onClose} saveFile={saveFile} />
       )}
     </div>
   );

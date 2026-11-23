@@ -128,6 +128,12 @@ impl Store {
             return Err(format!("\"{path}\" is not a pack file."));
         }
         let full = self.pack_dir(id)?.join(rel(path));
+        // Never follow a link out of the pack folder.
+        match fs::symlink_metadata(&full) {
+            Ok(m) if m.file_type().is_file() => {}
+            Ok(_) => return Err(format!("{path} is not a regular file.")),
+            Err(e) => return Err(io_err(&format!("Could not open {path}"), e)),
+        }
         let file = fs::File::open(&full).map_err(|e| io_err(&format!("Could not open {path}"), e))?;
         let limit = size_limit(path);
         let len = file.metadata().map(|m| m.len()).unwrap_or(0);
@@ -358,6 +364,19 @@ mod tests {
         assert!(s.commit(&t, "empty", None).unwrap_err().contains("topic.json"));
         s.cancel(&t).unwrap();
         assert!(s.write(&t, "topic.json", b"x").is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn does_not_follow_symlinks() {
+        let (tmp, s) = store();
+        save(&s, "one", None, "One").unwrap();
+        let secret = tmp.path().join("secret.json");
+        fs::write(&secret, b"{}").unwrap();
+        let link = s.root.join("one").join("questions.csv");
+        std::os::unix::fs::symlink(&secret, &link).unwrap();
+        assert!(!s.files("one").unwrap().contains(&"questions.csv".to_string()));
+        assert!(s.read("one", "questions.csv").unwrap_err().contains("not a regular file"));
     }
 
     #[test]

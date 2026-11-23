@@ -169,6 +169,10 @@ test("preview a run without recording a score", async ({ page }) => {
   }
   await expect(page.getByTestId("final-score")).toHaveText("21");
   await expect(page.getByText("New best")).toHaveCount(0);
+  // The share card can be saved from the preview too.
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download image" }).click();
+  expect((await download).suggestedFilename()).toBe("kiss-n-tell-preview-21.png");
   await page.getByRole("button", { name: "Back to editor" }).click();
   await expect(page.getByRole("tab", { name: /Images/ })).toBeVisible();
 });
@@ -210,8 +214,43 @@ test("CSV export and import keep the questions", async ({ page }) => {
   expect(csv).toBe(questionsCsv(8));
   // Importing over existing questions asks first.
   await page.getByTestId("csv-input").setInputFiles({ name: "q.csv", mimeType: "text/csv", buffer: Buffer.from(questionsCsv(9)) });
-  await page.getByRole("dialog").getByRole("button", { name: "Replace questions" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Replace all" }).click();
   await expect(page.getByRole("tab", { name: /Questions/ })).toContainText("9");
+  // Adding keeps the existing ones and renumbers clashing ids.
+  await page.getByTestId("csv-input").setInputFiles({ name: "more.csv", mimeType: "text/csv", buffer: Buffer.from(questionsCsv(2)) });
+  await page.getByRole("dialog").getByRole("button", { name: "Add to the end" }).click();
+  await expect(page.getByRole("tab", { name: /Questions/ })).toContainText("11");
+  await expect(page.getByRole("status")).toContainText("2 question ids were already used");
+  await expect(page.getByLabel("Question id")).toHaveValue("q1-2");
+  await page.getByRole("tab", { name: /Check/ }).click();
+  await expect(page.getByRole("tabpanel")).not.toContainText("Duplicate question id");
+});
+
+test("drop a pack ZIP anywhere in the editor to import it", async ({ page }) => {
+  const zip = packZip("dropped", "Dropped Pack");
+  const dt = await page.evaluateHandle((b64) => {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const data = new DataTransfer();
+    data.items.add(new File([bytes], "dropped.zip", { type: "application/zip" }));
+    return data;
+  }, zip.toString("base64"));
+  const target = page.getByRole("heading", { name: "Pack editor" });
+  await target.dispatchEvent("dragover", { dataTransfer: dt });
+  await target.dispatchEvent("drop", { dataTransfer: dt });
+  await expect(page.getByRole("status")).toContainText("Imported dropped.zip");
+  await expect(page.getByRole("heading", { name: "Dropped Pack" })).toBeVisible();
+});
+
+test("tabs work with the arrow keys", async ({ page }) => {
+  await page.getByRole("main").getByRole("button", { name: "New pack" }).click();
+  await page.getByRole("button", { name: "Blank pack" }).click();
+  await page.getByRole("tab", { name: /Topic/ }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: /Questions/ })).toBeFocused();
+  await expect(page.getByRole("tab", { name: /Questions/ })).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByRole("tab", { name: /Check/ })).toHaveAttribute("aria-selected", "true");
 });
 
 test("narrow window: no sideways scrolling", async ({ page }) => {
