@@ -1,6 +1,6 @@
 # Kiss N Tell: project progress
 
-**Last updated:** 23 November 2026, 09:50 UTC  
+**Last updated:** 23 November 2026, 09:55 UTC  
 **Live site:** https://kiss-n-tell-chi.vercel.app  
 **Repo:** https://github.com/TheMiniMingg/Kiss-n-Tell- (public, MIT)
 
@@ -8,17 +8,17 @@ This is the living record of where the whole project stands. It is updated whene
 
 ## At a glance
 
-The web game is merged to `main` and live, built from `main`, with three sample topics. The desktop app and pack editor are built and finishing their final audit, and the owner edit mode is being built. The main thing the project waits on is your content: topics, characters, art and the question CSVs.
+The web game and the desktop app with its pack editor are both merged to `main`. The site is live from `main` with three sample topics. The owner edit mode is the last piece still being built. The main thing the project waits on is your content: topics, characters, art and the question CSVs.
 
 | Area | Status | Where |
 | --- | --- | --- |
 | Web game (rules, screens, share card) | **Merged to `main`** 23 Nov 09:42, two audits done | PR #1 |
 | Hosting | Live on Vercel, built from `main`, updates on every merge | kiss-n-tell-chi.vercel.app |
-| Desktop app and pack editor | Built, CI green, final audit running | PR #2 |
+| Desktop app and pack editor | **Merged to `main`** 23 Nov 09:52, audited | PR #2 |
 | Owner edit mode, donate and social buttons | Being built | Owner edit thread (no PR yet) |
 | Real topics, characters, art, questions | Waiting on you | `content/presets/` |
 | Decisions made for you (34) | Waiting on your review | decisions-for-review.pdf |
-| Desktop installers (Windows, macOS) | Not built yet: the first version tag builds them | GitHub Releases |
+| Desktop installers (Windows, macOS) | First proof build running on `main`; a version tag makes a release | GitHub Releases |
 
 ## Roadmap phases
 
@@ -30,7 +30,7 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 | P1 Engine and play | Topic select, shuffled questions, 20 s timer, one guess, tier feedback, stage images, results, share card, replay | **Done**, merged to `main` (PR #1) |
 | P2 Content | 3 real topics with fact-checked Q&A, 33 character images (11 per character) | **Waiting on you**. Sample topics stand in |
 | P3 Website launch | Static site, phone layout, 18+ notice, hosting | **Live from `main`** with sample topics. Full launch = real content |
-| P4 Desktop app and editor | Tauri shell, offline pack editor, ZIP import/export, unsigned installers | **Built** (PR #2). Installers build on the first tag |
+| P4 Desktop app and editor | Tauri shell, offline pack editor, ZIP import/export, unsigned installers | **Done**, merged to `main` (PR #2). Proof installer build running |
 | Extra: owner tools | On-site owner edit mode behind a password, donate and social buttons | **In progress** |
 | P5 Later | Bring-your-own-API question generation and image providers | Not started (after V1) |
 
@@ -63,7 +63,8 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 
 **Tests**
 - Web: 58 unit tests and 80 browser tests on computer and phone sizes (2 phone clipboard tests skipped on purpose), plus typecheck, content check and build, run on every pull request. All passed on the merged code.
-- Desktop: 13 editor browser tests plus Rust tests, and a native Linux build and smoke test in CI.
+- Desktop: 15 editor browser tests, 5 Rust storage tests (clippy clean) and a native Linux build in CI.
+- Whole repo after both merges: 88 unit tests, 80 web browser tests, 15 desktop browser tests, all green.
 
 **Fixed in the second web audit** (8 screen sizes, 320 to 1920 px, plus a code review)
 - Text typed before a timeout no longer carries into the next question.
@@ -74,6 +75,14 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 - Curly apostrophes and Unicode hyphens from phone keyboards match plain ones.
 - The content check rejects answers over 40 characters (the input box limit).
 - The "Desktop downloads" link stays hidden until a release exists. Link preview tags added.
+
+**Fixed in the desktop audit**
+- CSV import can add to the end as well as replace all (clashing question ids are renamed).
+- Drop a ZIP anywhere to import it. Import problems are labelled by the file they came from.
+- The preview run's share card saves to Downloads.
+- Arrow keys move between editor tabs, and the selected question scrolls into view.
+- Layout fixes: tabs don't wrap, words aren't split, medium window widths work, the New pack list scrolls.
+- Pack storage refuses symlinks.
 
 ## What's live
 
@@ -90,11 +99,11 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 | PR | What | State |
 | --- | --- | --- |
 | [#1](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/1) | Web game, content tooling, tests, Vercel config | **Merged** 09:42 UTC |
-| [#2](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/2) | Desktop app and pack editor | Open, CI green. Final audit, then rebases onto `main` and merges |
+| [#2](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/2) | Desktop app and pack editor | **Merged** 09:52 UTC |
 | Owner edit mode | Password-protected on-site editing, donate and social buttons | Not opened yet. Merges after #2 |
 | Progress doc | This file and the PDF generator | Opened from the progress thread. Merges after the others |
 
-Merge order: #1, then #2, then owner edit mode, then this progress doc with final numbers.
+Merge order: #1 (done), #2 (done), then owner edit mode, then this progress doc with final numbers.
 
 ## Decisions pending your review
 
@@ -133,10 +142,10 @@ Choices from the owner edit mode thread will be added here and to the decisions 
 
 ## Next steps
 
-1. Merge PR #2, then the owner edit mode PR, each after its final audit (running now). PR #1 is merged.
+1. Merge the owner edit mode PR after its final audit (running now). PRs #1 and #2 are merged.
 2. Update this doc and the PDF with the merged state.
 3. Add your topics, art and CSVs, either through the owner edit mode on the site or as files in `content/presets/`. Sample topics can then be hidden (decision 11).
-4. Push the first version tag (for example `v0.1.0`) to build the Windows and macOS installers, then publish the draft release.
+4. Check the first proof installer build, then push a version tag (for example `v0.1.0`) to build the Windows and macOS installers into a draft release and publish it.
 5. After V1: bring-your-own-API question and image generation (P5).
 
 ## Risks and notes
@@ -152,6 +161,7 @@ Choices from the owner edit mode thread will be added here and to the decisions 
 
 | When (23 Nov 2026, UTC) | What happened |
 | --- | --- |
+| 09:52 | PR #2 merged after its audit; first proof installer build started on `main` |
 | 09:42 | PR #1 merged after a second audit (10 fixes); site now builds from `main` |
 | 09:32 | Progress report and this doc opened as PR #3 |
 | 09:30 | Final audits started in all three build threads |
