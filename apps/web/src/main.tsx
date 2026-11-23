@@ -10,7 +10,8 @@ createRoot(document.getElementById("root") as HTMLElement).render(
       features={{ editor: false }}
       links={{
         source: "https://github.com/TheMiniMingg/Kiss-n-Tell-",
-        downloads: "https://github.com/TheMiniMingg/Kiss-n-Tell-/releases",
+        // Add `downloads: "https://github.com/TheMiniMingg/Kiss-n-Tell-/releases"`
+        // once the first desktop release is published; until then the page is empty.
       }}
     />
   </StrictMode>,

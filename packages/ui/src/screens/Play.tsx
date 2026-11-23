@@ -1,6 +1,7 @@
 import {
   checkTimeout,
   currentQuestion,
+  MAX_ANSWER_LENGTH,
   nextQuestion,
   stageForScore,
   submitAnswer,
@@ -80,9 +81,11 @@ export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit, qui
     };
   }, [answering, run.index]);
 
-  // Back button asks before leaving.
+  // Back button asks before leaving. Only a press during this run counts,
+  // not the count left over from an earlier run.
+  const initialQuitRequest = useRef(quitRequest);
   useEffect(() => {
-    if (quitRequest > 0) setConfirmQuit(true);
+    if (quitRequest !== initialQuitRequest.current) setConfirmQuit(true);
   }, [quitRequest]);
 
   // Focus management. Layout effect so focus happens inside the click/keypress
@@ -110,8 +113,11 @@ export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit, qui
 
   const advance = useCallback(() => {
     if (Date.now() - resolvedAt.current < ADVANCE_GUARD_MS) return;
-    if (run.phase === "finished") onFinish(run);
-    else setRun((r) => nextQuestion(r, Date.now()));
+    if (run.phase === "finished") return onFinish(run);
+    // Start the next question clean: no text or warning left over from a timeout.
+    setInput("");
+    setRejection(null);
+    setRun((r) => nextQuestion(r, Date.now()));
   }, [run, onFinish]);
 
   // A held Enter key auto-repeats; never let a repeat skip the feedback.
@@ -182,7 +188,7 @@ export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit, qui
                   autoCapitalize="none"
                   spellCheck={false}
                   enterKeyHint="go"
-                  maxLength={40}
+                  maxLength={MAX_ANSWER_LENGTH}
                   aria-invalid={rejection ? true : undefined}
                   aria-describedby={rejection ? "answer-error" : "answer-hint"}
                 />
@@ -239,7 +245,10 @@ export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit, qui
             </>
           }
         >
-          <p>Your score for this run won't be saved. The timer keeps running while this is open.</p>
+          <p>
+            Your score for this run won't be saved.
+            {answering && " The timer keeps running while this is open."}
+          </p>
         </Modal>
       )}
     </main>

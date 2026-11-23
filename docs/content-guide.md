@@ -8,7 +8,7 @@ One row per accepted answer. Save it from any spreadsheet as **CSV UTF-8**.
 | --- | --- | --- |
 | `question_id` | every row | Lowercase letters, digits, `-` or `_`. Rows with the same id belong to the same question. |
 | `prompt` | once per question | The question text. Later rows of the same question can leave it blank. |
-| `answer` | every answer row | One word, at least 2 characters. Matching ignores case, surrounding spaces and surrounding punctuation. |
+| `answer` | every answer row | One word, 2 to 40 characters. Matching ignores case, surrounding spaces and surrounding punctuation, and treats curly apostrophes (’) as straight ones (') so phone keyboards match. |
 | `tier` | every answer row | `common`, `rare` or `legendary` (or `c`/`r`/`l`, or `1`/`2`/`3`). |
 | `timer_seconds` | optional | 5 to 120. Defaults to 20. Only needs to be on one row of the question. |
 

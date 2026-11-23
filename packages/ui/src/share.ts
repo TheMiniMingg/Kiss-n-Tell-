@@ -42,8 +42,8 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
 
   const grad = ctx.createLinearGradient(0, H * 0.55, 0, H);
   grad.addColorStop(0, "rgba(18,10,22,0)");
-  grad.addColorStop(0.45, "rgba(18,10,22,0.85)");
-  grad.addColorStop(1, "rgba(18,10,22,0.97)");
+  grad.addColorStop(0.4, "rgba(18,10,22,0.9)");
+  grad.addColorStop(1, "rgba(18,10,22,0.98)");
   ctx.fillStyle = grad;
   ctx.fillRect(0, H * 0.55, W, H * 0.45);
 
@@ -92,9 +92,17 @@ export async function copyCard(make: () => Promise<Blob>): Promise<ShareOutcome>
     downloadBlob(await make(), "kiss-n-tell.png");
     return "downloaded";
   }
-  // Pass a promise so Safari keeps the user gesture while the image renders.
-  await navigator.clipboard.write([new ClipboardItem({ "image/png": make() })]);
-  return "copied";
+  const card = make();
+  try {
+    // Pass a promise so Safari keeps the user gesture while the image renders.
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": card })]);
+    return "copied";
+  } catch {
+    // The browser refused the clipboard (permission, focus, unsupported type):
+    // fall back to a download so the player still gets the image.
+    downloadBlob(await card, "kiss-n-tell.png");
+    return "downloaded";
+  }
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {

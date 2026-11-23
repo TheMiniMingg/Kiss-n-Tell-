@@ -11,15 +11,19 @@ interface Props {
 /** Accessible modal: traps focus loosely, closes on Escape when onClose is set. */
 export function Modal({ title, children, actions, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  // Parents often pass a new onClose on every render (the play screen re-renders
+  // every timer tick). Keep it in a ref so focus setup runs once, on open.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
     const el = ref.current;
     const first = el?.querySelector<HTMLElement>("[data-autofocus]") ?? el?.querySelector<HTMLElement>("button");
     first?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && onClose) {
+      if (e.key === "Escape" && closeRef.current) {
         e.preventDefault();
-        onClose();
+        closeRef.current();
       }
       if (e.key === "Tab" && el) {
         const items = Array.from(el.querySelectorAll<HTMLElement>("button, a[href], input"));
@@ -40,7 +44,7 @@ export function Modal({ title, children, actions, onClose }: Props) {
       document.removeEventListener("keydown", onKey);
       prev?.focus?.();
     };
-  }, [onClose]);
+  }, []);
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" ref={ref}>
