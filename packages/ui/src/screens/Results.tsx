@@ -19,9 +19,11 @@ interface Props {
   siteLabel: string;
   onReplay: () => void;
   onHome: () => void;
+  /** Host override for saving the card (desktop writes it to Downloads). Resolves to where it was saved. */
+  saveFile?: (blob: Blob, filename: string) => Promise<string>;
 }
 
-export function Results({ topic, run, isNewBest, siteLabel, onReplay, onHome }: Props) {
+export function Results({ topic, run, isNewBest, siteLabel, onReplay, onHome, saveFile }: Props) {
   const summary = useMemo(() => summarize(run), [run]);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -84,7 +86,9 @@ export function Results({ topic, run, isNewBest, siteLabel, onReplay, onHome }: 
               })}>Copy image</button>
             )}
             <button className={`btn ${canCopyImage() ? "btn--ghost" : "btn--primary"}`} disabled={busy} onClick={() => act(async () => {
-              downloadBlob(await makeCard(), `kiss-n-tell-${topic.id}-${summary.score}.png`);
+              const name = `kiss-n-tell-${topic.id.replace(/[^a-z0-9_-]+/gi, "-")}-${summary.score}.png`;
+              if (saveFile) return `Image saved to ${await saveFile(await makeCard(), name)}`;
+              downloadBlob(await makeCard(), name);
               return "Image downloaded.";
             })}>Download image</button>
             {canNativeShareFiles() && (
