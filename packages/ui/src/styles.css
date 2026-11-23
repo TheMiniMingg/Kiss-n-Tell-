@@ -41,9 +41,8 @@ body {
   min-height: 100dvh;
   background:
     radial-gradient(1200px 600px at 80% -10%, #ff4f8b22, transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, #8a4fff1f, transparent 60%),
     var(--bg);
-  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 #root {
   min-height: 100dvh;
@@ -738,7 +737,46 @@ button {
   margin-top: 18px;
 }
 
-/* Narrow screens: stack art above the panel. */
+/* Narrow screens: stack art above the panel; compact topic cards. */
+@media (max-width: 560px) {
+  .topics {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .topic__btn {
+    flex-direction: row;
+  }
+  .topic__thumb {
+    width: 96px;
+    flex: 0 0 96px;
+    aspect-ratio: auto;
+    height: auto;
+    min-height: 128px;
+  }
+  .topic__body {
+    padding: 12px 14px;
+    gap: 4px;
+  }
+  .topic__title {
+    font-size: 1.1rem;
+  }
+  .topic__desc {
+    font-size: 0.88rem;
+  }
+  .topic__meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .topic__play {
+    margin-top: 6px;
+    padding: 6px 14px;
+    font-size: 0.9rem;
+  }
+  .home__hero {
+    padding: 20px 0 8px;
+  }
+}
+
 @media (max-width: 760px) {
   .play__layout,
   .results__layout {
