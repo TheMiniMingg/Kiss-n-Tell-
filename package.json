@@ -1,0 +1,38 @@
+{
+  "name": "kiss-n-tell",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Kiss N Tell: a rare-answer trivia game with character stage progression.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "content:build": "tsx scripts/build-content.ts",
+    "content:check": "tsx scripts/build-content.ts --check",
+    "content:placeholders": "tsx scripts/make-placeholders.ts",
+    "dev": "pnpm content:build && pnpm --filter @kiss-n-tell/web dev",
+    "build": "pnpm content:build && pnpm --filter @kiss-n-tell/web build",
+    "preview": "pnpm --filter @kiss-n-tell/web preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "pnpm build && pnpm --filter @kiss-n-tell/web test:e2e",
+    "typecheck": "tsc -p packages/engine && tsc -p packages/ui && tsc -p apps/web && tsc -p scripts",
+    "check": "pnpm typecheck && pnpm test && pnpm content:check"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "image-size": "^1.2.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "@kiss-n-tell/engine": "workspace:*"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
