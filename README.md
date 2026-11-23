@@ -43,14 +43,21 @@ See [docs/content-guide.md](docs/content-guide.md) for the CSV format, image rul
 ## Project layout
 
 ```
-apps/web/            Website (Vite + React), preset play only
+apps/web/            Website (Vite + React): the game, plus a password-protected owner mode
 apps/desktop/        Desktop app (Tauri v2): the same game plus an offline pack editor
+api/                 Vercel function behind the website's owner mode (unlock, save to git)
 packages/engine/     Game rules: scoring, answer matching, question draw, timer, validation (unit-tested, no UI)
 packages/ui/         React screens and components shared by web and desktop
+packages/editor/     The pack editor, shared by the desktop app and the website's owner mode
 content/presets/     Topics, questions and character art
+content/site.json    Site text, donate button and social links
 scripts/             Content build/validation and placeholder art generator
 docs/                Content guide and design notes
 ```
+
+## Editing the live site
+
+The website has an owner mode: the small **Edit site** link in the footer (or `/#edit`) asks for a password, then lets the owner edit topics, questions, answers and stage images, plus the site's text, donate button and social links. Saving commits the change to this repository and Vercel redeploys the site. The password is checked on the server and never appears in the code. See [docs/owner-mode.md](docs/owner-mode.md) for setup.
 
 ## Desktop app
 

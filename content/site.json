@@ -1,0 +1,15 @@
+{
+  "text": {
+    "title": "Kiss N Tell",
+    "tagline": "Name the rarest answer you can. 7 questions, 10 stages, one guess each.",
+    "topicsHeading": "Choose a topic",
+    "supportText": "Enjoying the game? Support it or come say hi.",
+    "footerNote": "All characters are fictional adults."
+  },
+  "donate": { "label": "Donate", "url": "" },
+  "socials": [
+    { "platform": "instagram", "url": "" },
+    { "platform": "x", "url": "" },
+    { "platform": "tiktok", "url": "" }
+  ]
+}

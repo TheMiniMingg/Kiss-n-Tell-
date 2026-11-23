@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { parseWordList } from "../pack/index.js";
+import { parseWordList } from "./pack/index.js";
 
 interface FieldProps {
   label: string;

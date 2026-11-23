@@ -2,20 +2,21 @@
  * Validates every preset in content/presets and writes the web build's
  * content to apps/web/public/content:
  *
- *   manifest.json          all topics, questions and stage image URLs
+ *   manifest.json          site settings (content/site.json), all topics, questions and stage image URLs
  *   <topic-id>/NN.<ext>     stage images
  *
  * Usage:
  *   pnpm content:build      validate + write (fails on errors)
  *   pnpm content:check      validate only
  */
-import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Issue } from "@kiss-n-tell/engine";
+import { parseSiteConfig, type Issue } from "@kiss-n-tell/engine";
 import { listTopicDirs, loadTopic, stageExt, type LoadedTopic } from "./lib/content.js";
 
 const ROOT = join(import.meta.dirname, "..");
 const PRESETS = join(ROOT, "content", "presets");
+const SITE = join(ROOT, "content", "site.json");
 const OUT = join(ROOT, "apps", "web", "public", "content");
 const checkOnly = process.argv.includes("--check");
 const quiet = process.argv.includes("--quiet");
@@ -31,6 +32,16 @@ for (const t of loaded) {
   if (ids.has(t.meta.id)) issues.push({ level: "error", where: `topic ${t.meta.id}`, message: "Duplicate topic id." });
   ids.add(t.meta.id);
 }
+let siteRaw: unknown = undefined;
+if (existsSync(SITE)) {
+  try {
+    siteRaw = JSON.parse(readFileSync(SITE, "utf8"));
+  } catch (e) {
+    issues.push({ level: "error", where: "content/site.json", message: `Not valid JSON: ${(e as Error).message}` });
+  }
+}
+const site = parseSiteConfig(siteRaw);
+issues.push(...site.issues);
 if (loaded.length === 0) issues.push({ level: "error", where: "content/presets", message: "No topics found." });
 
 const errors = issues.filter((i) => i.level === "error");
@@ -51,6 +62,7 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 const manifest = {
   schemaVersion: 1,
+  site: site.config,
   topics: loaded.map((t) => {
     const outDir = join(OUT, t.meta.id);
     mkdirSync(outDir, { recursive: true });

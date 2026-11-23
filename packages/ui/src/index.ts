@@ -1,4 +1,5 @@
-export { App, type AppFeatures, type AppLinks, type EditorHost } from "./App.js";
+export { App, type AppFeatures, type AppLinks, type EditorEntry, type EditorHost } from "./App.js";
+export { SupportLinks } from "./components/SupportLinks.js";
 export { loadManifest, preloadImages, type GameTopic, type GameCharacter, type Manifest } from "./content.js";
 export { storage } from "./storage.js";
 export { Play } from "./screens/Play.js";

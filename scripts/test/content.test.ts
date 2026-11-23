@@ -78,3 +78,11 @@ describe("preset content", () => {
     expect(listTopicDirs(tmp).map((d) => d.split(/[\\/]/).pop())).toEqual(["space"]);
   });
 });
+
+describe("site settings file", () => {
+  it("the shipped content/site.json is valid", async () => {
+    const { parseSiteConfig } = await import("@kiss-n-tell/engine");
+    const raw = JSON.parse(readFileSync(join(PRESETS, "..", "site.json"), "utf8")) as unknown;
+    expect(parseSiteConfig(raw).issues).toEqual([]);
+  });
+});

@@ -643,6 +643,8 @@
 @media (max-width: 760px) {
   .ed {
     grid-template-columns: minmax(0, 1fr);
+    /* Stacked: don't stretch the side bar's row to fill the window. */
+    align-content: start;
   }
   .ed-side {
     position: static;
@@ -652,6 +654,9 @@
   }
   .ed-main {
     padding: 16px;
+  }
+  .ed-welcome {
+    margin-top: 8px;
   }
   .ed-grid,
   .ed-tiers {

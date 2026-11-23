@@ -1,8 +1,8 @@
 import { FINAL_STAGE, STAGE_COUNT } from "@kiss-n-tell/engine";
 import { StageViewer } from "@kiss-n-tell/ui";
 import { useRef, useState, type DragEvent } from "react";
-import { ImageUrls } from "../images.js";
-import { stageName, type PackDraft, type StageImage } from "../pack/index.js";
+import { ImageUrls } from "./images.js";
+import { stageName, type PackDraft, type StageImage } from "./pack/index.js";
 
 interface Props {
   draft: PackDraft;

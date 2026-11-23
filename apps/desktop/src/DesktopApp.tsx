@@ -1,8 +1,7 @@
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { App, loadManifest } from "@kiss-n-tell/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Editor } from "./editor/Editor.js";
-import { ImageUrls } from "./images.js";
-import { loadAllPacks, playableTopics, type LoadResult } from "./packs.js";
+import { Editor, ImageUrls, loadAllPacks, playableTopics, type LoadResult } from "@kiss-n-tell/editor";
 import { pickStore } from "./store/index.js";
 
 const CONTENT_URL = "content/manifest.json";
@@ -31,6 +30,20 @@ export function DesktopApp() {
       .then((m) => setPresets(m.topics.map((t) => ({ id: t.id, title: t.title }))))
       .catch(() => undefined);
   }, [reload]);
+
+  // The native webview doesn't open new windows, so send https links that would
+  // (source code, donate, social profiles) to the system browser instead.
+  useEffect(() => {
+    if (!isTauri()) return;
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a || !/^https:\/\//i.test(a.href) || a.target !== "_blank") return;
+      e.preventDefault();
+      void invoke("open_url", { url: a.href }).catch(() => undefined);
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
 
   const localTopics = useMemo(() => playableTopics(loaded.packs, presetIds, urls.current), [loaded, presetIds]);
 

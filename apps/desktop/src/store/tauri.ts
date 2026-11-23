@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { PackFiles } from "../pack/index.js";
-import { StoreError, type PackStore } from "./types.js";
+import { StoreError, type PackFiles, type PackStore } from "@kiss-n-tell/editor";
 
 async function call<T>(cmd: string, args?: Parameters<typeof invoke>[1], options?: Parameters<typeof invoke>[2]): Promise<T> {
   try {
@@ -47,4 +46,12 @@ export const tauriStore: PackStore = {
   remove: (folder) => call("delete_pack", { id: folder }),
   saveFile: (bytes, filename) => call<string>("save_to_downloads", bytes, { headers: { "x-name": filename } }),
   openFolder: () => call("open_packs_folder"),
+  async onCloseRequested(ask) {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    const win = getCurrentWindow();
+    return win.onCloseRequested((event) => {
+      event.preventDefault();
+      ask(() => void win.destroy());
+    });
+  },
 };

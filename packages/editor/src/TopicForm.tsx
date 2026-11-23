@@ -1,5 +1,5 @@
 import { NumberField, TextField } from "./fields.js";
-import type { PackDraft } from "../pack/index.js";
+import type { PackDraft } from "./pack/index.js";
 
 interface Props {
   draft: PackDraft;
