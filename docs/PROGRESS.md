@@ -1,6 +1,6 @@
 # Kiss N Tell: project progress
 
-**Last updated:** 23 November 2026, 09:45 UTC  
+**Last updated:** 23 November 2026, 09:50 UTC  
 **Live site:** https://kiss-n-tell-chi.vercel.app  
 **Repo:** https://github.com/TheMiniMingg/Kiss-n-Tell- (public, MIT)
 
@@ -8,12 +8,12 @@ This is the living record of where the whole project stands. It is updated whene
 
 ## At a glance
 
-The game is built, tested and playable on the live site with three sample topics. The desktop app and pack editor are built too. All three build threads are doing a final audit and merging to `main` now. The main thing the project waits on is your content: topics, characters, art and the question CSVs.
+The web game is merged to `main` and live, built from `main`, with three sample topics. The desktop app and pack editor are built and finishing their final audit, and the owner edit mode is being built. The main thing the project waits on is your content: topics, characters, art and the question CSVs.
 
 | Area | Status | Where |
 | --- | --- | --- |
-| Web game (rules, screens, share card) | Built, audited, final audit running | PR #1 |
-| Hosting | Live on Vercel, updates on every merge to `main` | kiss-n-tell-chi.vercel.app |
+| Web game (rules, screens, share card) | **Merged to `main`** 23 Nov 09:42, two audits done | PR #1 |
+| Hosting | Live on Vercel, built from `main`, updates on every merge | kiss-n-tell-chi.vercel.app |
 | Desktop app and pack editor | Built, CI green, final audit running | PR #2 |
 | Owner edit mode, donate and social buttons | Being built | Owner edit thread (no PR yet) |
 | Real topics, characters, art, questions | Waiting on you | `content/presets/` |
@@ -27,9 +27,9 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 | Phase | Scope | Status |
 | --- | --- | --- |
 | P0 Decisions and fixtures | Name, MIT license, pack schema, CSV-to-game script, placeholder topics and images, scoring tests | **Done** (PR #1) |
-| P1 Engine and play | Topic select, shuffled questions, 20 s timer, one guess, tier feedback, stage images, results, share card, replay | **Done** (PR #1), final audit running |
+| P1 Engine and play | Topic select, shuffled questions, 20 s timer, one guess, tier feedback, stage images, results, share card, replay | **Done**, merged to `main` (PR #1) |
 | P2 Content | 3 real topics with fact-checked Q&A, 33 character images (11 per character) | **Waiting on you**. Sample topics stand in |
-| P3 Website launch | Static site, phone layout, 18+ notice, hosting | **Live** with sample topics. Full launch = real content on `main` |
+| P3 Website launch | Static site, phone layout, 18+ notice, hosting | **Live from `main`** with sample topics. Full launch = real content |
 | P4 Desktop app and editor | Tauri shell, offline pack editor, ZIP import/export, unsigned installers | **Built** (PR #2). Installers build on the first tag |
 | Extra: owner tools | On-site owner edit mode behind a password, donate and social buttons | **In progress** |
 | P5 Later | Bring-your-own-API question generation and image providers | Not started (after V1) |
@@ -62,8 +62,18 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 - Topic folders starting with `_` are drafts and stay off the site.
 
 **Tests**
-- Web: 56 unit tests and 67 browser tests on computer and phone sizes, run on every pull request.
+- Web: 58 unit tests and 80 browser tests on computer and phone sizes (2 phone clipboard tests skipped on purpose), plus typecheck, content check and build, run on every pull request. All passed on the merged code.
 - Desktop: 13 editor browser tests plus Rust tests, and a native Linux build and smoke test in CI.
+
+**Fixed in the second web audit** (8 screen sizes, 320 to 1920 px, plus a code review)
+- Text typed before a timeout no longer carries into the next question.
+- A Back press in one run no longer opens the quit dialog at the start of the next.
+- Tab can reach Leave in the quit dialog, and the dialog only mentions the timer when one is running.
+- A first score of 0 no longer shows "New best".
+- Copy image falls back to a download if the browser refuses the clipboard. The share card shades the art more behind its text.
+- Curly apostrophes and Unicode hyphens from phone keyboards match plain ones.
+- The content check rejects answers over 40 characters (the input box limit).
+- The "Desktop downloads" link stays hidden until a release exists. Link preview tags added.
 
 ## What's live
 
@@ -71,7 +81,7 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 | --- | --- |
 | Site | https://kiss-n-tell-chi.vercel.app, public, no login |
 | Hosting account | Your own Vercel (team "ming-street", same as minime.design), Hobby plan |
-| Source of the live build | PR #1's branch for now; `main` takes over once PR #1 merges |
+| Source of the live build | `main` (since PR #1 merged at 09:42 UTC) |
 | Content on the site | 3 sample topics (Ancient Greece, Space, Animals) with placeholder art, marked "Sample" |
 | Updates | Every merge to `main` redeploys. Each pull request gets its own preview link |
 
@@ -79,8 +89,8 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 
 | PR | What | State |
 | --- | --- | --- |
-| [#1](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/1) | Web game, content tooling, tests, Vercel config | Open, checks pass. Final audit, then merges first |
-| [#2](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/2) | Desktop app and pack editor | Open, CI green. Rebases onto `main` after #1, then merges |
+| [#1](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/1) | Web game, content tooling, tests, Vercel config | **Merged** 09:42 UTC |
+| [#2](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/2) | Desktop app and pack editor | Open, CI green. Final audit, then rebases onto `main` and merges |
 | Owner edit mode | Password-protected on-site editing, donate and social buttons | Not opened yet. Merges after #2 |
 | Progress doc | This file and the PDF generator | Opened from the progress thread. Merges after the others |
 
@@ -123,7 +133,7 @@ Choices from the owner edit mode thread will be added here and to the decisions 
 
 ## Next steps
 
-1. Merge PR #1, then PR #2, then the owner edit mode PR, each after its final audit (running now).
+1. Merge PR #2, then the owner edit mode PR, each after its final audit (running now). PR #1 is merged.
 2. Update this doc and the PDF with the merged state.
 3. Add your topics, art and CSVs, either through the owner edit mode on the site or as files in `content/presets/`. Sample topics can then be hidden (decision 11).
 4. Push the first version tag (for example `v0.1.0`) to build the Windows and macOS installers, then publish the draft release.
@@ -142,7 +152,9 @@ Choices from the owner edit mode thread will be added here and to the decisions 
 
 | When (23 Nov 2026, UTC) | What happened |
 | --- | --- |
-| 09:30 | Final audits started in all three build threads; progress tracking started |
+| 09:42 | PR #1 merged after a second audit (10 fixes); site now builds from `main` |
+| 09:32 | Progress report and this doc opened as PR #3 |
+| 09:30 | Final audits started in all three build threads |
 | 09:26 | Owner edit mode, donate and social buttons started; password stored on Vercel only |
 | 09:22 | Desktop app and pack editor opened as PR #2; CI green by 09:26 |
 | 09:17 | Site live on Vercel; desktop decisions added to the review PDF (items 24 to 34) |
