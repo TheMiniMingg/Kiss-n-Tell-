@@ -6,7 +6,7 @@ import type { PackDraft } from "./model.js";
 export const ZIP_LIMITS = {
   /** Largest ZIP file accepted. */
   maxZipBytes: 150 * 1024 * 1024,
-  /** Most entries a pack ZIP may list (a pack has 14 files). */
+  /** Most entries a pack ZIP may list (a pack has 14 files, 15 with a secret image). */
   maxEntries: 100,
   /** Per stage image, same as the preset build. */
   maxImageBytes: 8 * 1024 * 1024,
@@ -41,7 +41,7 @@ export function readPackZip(bytes: Uint8Array): { files: PackFiles; issues: Issu
       filter: (f) => {
         listed.push({ name: f.name, size: f.originalSize });
         if (listed.length > ZIP_LIMITS.maxEntries) {
-          throw new PackZipError(`The ZIP has more than ${ZIP_LIMITS.maxEntries} files. A pack has 14.`);
+          throw new PackZipError(`The ZIP has more than ${ZIP_LIMITS.maxEntries} files. A pack has 14 (15 with a secret image).`);
         }
         return false; // first pass: directory only
       },

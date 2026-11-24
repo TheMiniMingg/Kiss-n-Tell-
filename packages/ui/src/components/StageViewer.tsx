@@ -7,20 +7,23 @@ interface Props {
   stage: number;
   /** Highlight the ending reveal. */
   celebrate?: boolean;
+  /** Show the secret image (perfect run) instead of the stage. Ignored when the character has none. */
+  secret?: boolean;
 }
 
-export function StageViewer({ character, stage, celebrate }: Props) {
-  const src = character.stages[stage];
+export function StageViewer({ character, stage, celebrate, secret }: Props) {
+  const showSecret = !!secret && !!character.secret;
+  const src = showSecret ? character.secret : character.stages[stage];
   const [failed, setFailed] = useState<string | null>(null);
   const ratio = character.width && character.height ? `${character.width} / ${character.height}` : "3 / 4";
   return (
-    <figure className={`stage${celebrate ? " stage--celebrate" : ""}`} style={{ aspectRatio: ratio }}>
+    <figure className={`stage${celebrate ? " stage--celebrate" : ""}${showSecret ? " stage--secret" : ""}`} style={{ aspectRatio: ratio }}>
       {src && failed !== src ? (
         <img
           key={src}
           className="stage__img"
           src={src}
-          alt={`${character.name}, stage ${stage} of ${FINAL_STAGE}`}
+          alt={showSecret ? `${character.name}, secret image` : `${character.name}, stage ${stage} of ${FINAL_STAGE}`}
           draggable={false}
           onError={() => setFailed(src)}
         />
@@ -29,7 +32,7 @@ export function StageViewer({ character, stage, celebrate }: Props) {
       )}
       <figcaption className="stage__caption">
         <span className="stage__name">{character.name}</span>
-        <span className="stage__count">{stage === FINAL_STAGE ? "Ending" : `Stage ${stage}/${FINAL_STAGE}`}</span>
+        <span className="stage__count">{showSecret ? "Secret" : stage === FINAL_STAGE ? "Ending" : `Stage ${stage}/${FINAL_STAGE}`}</span>
       </figcaption>
     </figure>
   );

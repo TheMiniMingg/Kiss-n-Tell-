@@ -28,17 +28,20 @@ interface Props {
 
 export function Results({ topic, run, isNewBest, siteLabel, site, onReplay, onHome, saveFile }: Props) {
   const summary = useMemo(() => summarize(run), [run]);
+  /** A perfect run on a topic with a secret image shows (and shares) that image instead of the ending. */
+  const secret = summary.perfect && !!topic.character.secret;
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const cardRef = useRef<Promise<Blob> | null>(null);
 
   const makeCard = () => {
     cardRef.current ??= renderShareCard({
-      imageUrl: topic.character.stages[summary.stage] as string,
+      imageUrl: (secret ? topic.character.secret : topic.character.stages[summary.stage]) as string,
       topicTitle: topic.title,
       characterName: topic.character.name,
       summary,
       siteLabel,
+      secret,
     });
     return cardRef.current;
   };
@@ -57,24 +60,28 @@ export function Results({ topic, run, isNewBest, siteLabel, site, onReplay, onHo
     }
   };
 
-  const shareText = `I scored ${summary.score}/${summary.maxScore} on ${topic.title} in Kiss N Tell${summary.won ? " and unlocked the ending" : ""}.`;
+  const shareText = `I scored ${summary.score}/${summary.maxScore} on ${topic.title} in Kiss N Tell${secret ? " and unlocked the secret image" : summary.won ? " and unlocked the ending" : ""}.`;
 
   return (
     <main className="results">
       <div className="results__layout">
         <div className="results__art">
-          <StageViewer character={topic.character} stage={summary.stage} celebrate={summary.won} />
+          <StageViewer character={topic.character} stage={summary.stage} celebrate={summary.won} secret={secret} />
         </div>
         <section className="panel">
           <p className="panel__kicker">{topic.title}</p>
-          <h1 className="results__title">{summary.won ? "Ending unlocked!" : summary.score >= 7 ? "So close!" : "Run over"}</h1>
+          <h1 className="results__title">
+            {secret ? "Secret unlocked!" : summary.perfect ? "Perfect run!" : summary.won ? "Ending unlocked!" : summary.score >= 7 ? "So close!" : "Run over"}
+          </h1>
           <p className="results__score">
             <span className="results__num" data-testid="final-score">{summary.score}</span>
             <span className="results__max">/ {summary.maxScore} points</span>
             {isNewBest && <span className="pill pill--accent">New best</span>}
           </p>
           <p className="muted">
-            {summary.won
+            {summary.perfect
+              ? `Legendary on all ${run.questions.length} questions.${secret ? " Only a perfect run reveals this image." : ""}`
+              : summary.won
               ? summary.wonAtQuestion && summary.wonAtQuestion < run.questions.length
                 ? `You reached 10 points on question ${summary.wonAtQuestion}.`
                 : "You reached 10 points on the last question."

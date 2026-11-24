@@ -8,6 +8,11 @@ export function imageExtOf(file: { name: string; type: string }): ImageExt | nul
   return byMime ? (byMime[0] as ImageExt) : null;
 }
 
+/** True for a file meant as the secret image: "secret.webp", "Secret.PNG". */
+export function isSecretName(name: string): boolean {
+  return /^secret$/i.test(name.replace(/^.*[\\/]/, "").replace(/\.[^.]+$/, ""));
+}
+
 /** Stage number from a file name like "03.webp", "stage-3.png" or "char_10.jpg". */
 export function stageFromName(name: string): number | null {
   const base = name.replace(/\.[^.]+$/, "");

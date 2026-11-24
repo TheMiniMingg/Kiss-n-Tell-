@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { imageExtOf, placeImages, stageFromName } from "../src/images.js";
+import { imageExtOf, isSecretName, placeImages, stageFromName } from "../src/images.js";
 
 describe("stageFromName", () => {
   it("reads the last number in the name", () => {
@@ -44,5 +44,12 @@ describe("placeImages", () => {
     const { placed } = placeImages(empty, [{ name: "05.png", value: "a" }, { name: "5.png", value: "b" }]);
     expect(placed.get(5)).toBe("a");
     expect(placed.get(0)).toBe("b");
+  });
+});
+
+describe("isSecretName", () => {
+  it("matches a file named secret, any case and extension", () => {
+    for (const n of ["secret.webp", "Secret.PNG", "SECRET.jpg", "folder/secret.svg"]) expect(isSecretName(n), n).toBe(true);
+    for (const n of ["secret-2.png", "my-secret.png", "10.png", "secrets.webp", "secret.png.bak"]) expect(isSecretName(n), n).toBe(false);
   });
 });

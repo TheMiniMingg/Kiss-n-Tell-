@@ -42,12 +42,22 @@ If you generate answers with an AI, read them before adding them. Models often a
 - Max 8 MB per image.
 - `character.json` must have `age` 18 or older and should record `asset_rights` (where the art came from and under what terms).
 
+## Secret image (optional)
+
+Add `character/secret.webp` (or `.png`, `.jpg`, `.svg`) to give a topic a hidden reward for a **perfect run**: Legendary on all 7 questions, 21 points.
+
+- It replaces the ending on the 7th answer and on the results screen, with a gold "Secret" frame, and the share card uses it.
+- Nothing in the game hints at it before then. It's only downloaded once a player reaches question 7 with every answer Legendary.
+- Same rules as the stages: one file, max 8 MB, same aspect ratio as 00 to 10. Same art rules too: swimwear at most, no nudity.
+- A topic without one plays exactly as before; a perfect run there just says "Perfect run!" over the ending.
+- The build copies it under a name made from its content hash, so its address can't be guessed from the stage names. Like every image on a static site, someone using developer tools can still find it.
+
 ## Commands
 
 ```bash
 pnpm content:check        # validate all topics
 pnpm content:build        # validate and write apps/web/public/content
-pnpm content:placeholders # regenerate the sample SVG art
+pnpm content:placeholders # regenerate the sample SVG art (stages and secret)
 ```
 
 ## Drafts

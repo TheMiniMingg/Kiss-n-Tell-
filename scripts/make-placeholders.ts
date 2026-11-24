@@ -1,5 +1,6 @@
 /**
- * Writes placeholder stage images (00.svg ... 10.svg) for every preset
+ * Writes placeholder stage images (00.svg ... 10.svg) and a placeholder
+ * secret image (secret.svg, unlocked by a perfect run) for every preset
  * character that has a `placeholder_color` in character.json and no real art.
  * Run: pnpm content:placeholders
  */
@@ -50,6 +51,39 @@ function svg(stage: number, name: string, color: string): string {
 `;
 }
 
+/** The perfect-run reward: gold, starry, clearly different from the ending. */
+function secretSvg(name: string, color: string): string {
+  const stars = Array.from({ length: 24 }, (_, i) => {
+    const a = (i / 24) * Math.PI * 2;
+    const rr = i % 2 ? 250 : 360;
+    const x = (W / 2 + Math.cos(a) * rr).toFixed(0);
+    const y = (H / 2 - 40 + Math.sin(a) * rr).toFixed(0);
+    return `<circle cx="${x}" cy="${y}" r="${i % 3 ? 6 : 11}" fill="#ffe08a" opacity="0.9"/>`;
+  }).join("");
+  const star = Array.from({ length: 10 }, (_, i) => {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? 80 : 190;
+    return `${(W / 2 + Math.cos(a) * rr).toFixed(1)},${(H / 2 - 60 + Math.sin(a) * rr).toFixed(1)}`;
+  }).join(" ");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <defs>
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.7">
+      <stop offset="0" stop-color="#ffd76a"/>
+      <stop offset="0.45" stop-color="${color}"/>
+      <stop offset="1" stop-color="#120a16"/>
+    </radialGradient>
+  </defs>
+  <rect width="${W}" height="${H}" fill="url(#glow)"/>
+  ${stars}
+  <polygon points="${star}" fill="#fff6d5" stroke="#ffb800" stroke-width="10" stroke-linejoin="round"/>
+  <text x="${W / 2}" y="${H / 2 + 250}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="96" font-weight="800" fill="#fff">21/21</text>
+  <text x="${W / 2}" y="${H - 150}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="44" font-weight="700" fill="#fff">${escape(name)}</text>
+  <text x="${W / 2}" y="${H - 95}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="30" fill="#ffffffb0">Secret image (placeholder)</text>
+</svg>
+`;
+}
+
 function escape(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
 }
@@ -61,7 +95,7 @@ for (const topic of readdirSync(PRESETS)) {
   if (!existsSync(metaPath)) continue;
   const meta = JSON.parse(readFileSync(metaPath, "utf8")) as { name: string; placeholder_color?: string };
   if (!meta.placeholder_color) continue;
-  const hasRealArt = readdirSync(dir).some((f) => /^\d\d\.(webp|png|jpe?g)$/i.test(f));
+  const hasRealArt = readdirSync(dir).some((f) => /^(\d\d|secret)\.(webp|png|jpe?g)$/i.test(f));
   if (hasRealArt) {
     console.log(`skip ${topic}: real art present`);
     continue;
@@ -70,5 +104,7 @@ for (const topic of readdirSync(PRESETS)) {
     writeFileSync(join(dir, `${String(s).padStart(2, "0")}.svg`), svg(s, meta.name, meta.placeholder_color));
     written++;
   }
+  writeFileSync(join(dir, "secret.svg"), secretSvg(meta.name, meta.placeholder_color));
+  written++;
 }
 console.log(`Wrote ${written} placeholder images.`);

@@ -20,8 +20,10 @@ export const STAGE_COUNT = FINAL_STAGE + 1;
 export const DEFAULT_TIMER_SECONDS = 20;
 export const MIN_TIMER_SECONDS = 5;
 export const MAX_TIMER_SECONDS = 120;
-/** Highest possible score: a Legendary answer on every question. */
+/** Highest possible score: a Legendary answer on every question. A run that reaches it unlocks the secret image. */
 export const MAX_SCORE = QUESTIONS_PER_RUN * TIER_POINTS.legendary;
+/** File name (without extension) of a character's optional secret image, next to 00-10. */
+export const SECRET_IMAGE_NAME = "secret";
 
 export interface Question {
   id: string;
@@ -40,6 +42,12 @@ export interface Character {
   assetRights?: string;
   /** Exactly 11 image URLs or relative paths, index = stage (0-10). */
   stages: string[];
+  /**
+   * Optional secret image (URL or relative path), shown only after a perfect
+   * run (every answer Legendary, MAX_SCORE points). The game never hints at it
+   * before then, and a topic without one plays exactly as before.
+   */
+  secret?: string;
 }
 
 export interface Topic {

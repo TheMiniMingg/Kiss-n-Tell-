@@ -455,6 +455,31 @@ button {
   border-color: var(--legendary);
   box-shadow: 0 0 0 2px var(--legendary), 0 0 60px #ffc94d55;
 }
+/* Perfect-run secret image: a stronger, shimmering gold frame than the ending. */
+.stage--secret {
+  border-color: var(--legendary);
+  box-shadow: 0 0 0 3px var(--legendary), 0 0 90px #ffc94d88;
+  animation: secret-glow 2.4s ease-in-out infinite alternate;
+}
+.stage--secret .stage__img {
+  animation-duration: 0.9s;
+}
+.stage--secret .stage__count {
+  color: var(--legendary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+@keyframes secret-glow {
+  to {
+    box-shadow: 0 0 0 3px var(--legendary), 0 0 130px #ffc94dbb;
+  }
+}
+.result__secret {
+  margin: 0;
+  color: var(--legendary);
+  font-weight: 800;
+  font-size: 1.1rem;
+}
 @keyframes fade-in {
   from {
     opacity: 0;

@@ -9,8 +9,11 @@ import {
 import { ID_PATTERN, MAX_ID_LENGTH, stageName, type PackDraft } from "./model.js";
 import { ZIP_LIMITS } from "./zip.js";
 
-/** Engine topic for a pack. `stageUrls` are whatever the viewer can load (blob: URLs in the app). */
-export function packToTopic(pack: PackDraft, stageUrls: readonly string[]): Topic {
+/**
+ * Engine topic for a pack. `stageUrls` (and `secretUrl`) are whatever the
+ * viewer can load (blob: URLs in the app).
+ */
+export function packToTopic(pack: PackDraft, stageUrls: readonly string[], secretUrl?: string): Topic {
   return {
     id: pack.topic.id,
     title: pack.topic.title,
@@ -22,6 +25,7 @@ export function packToTopic(pack: PackDraft, stageUrls: readonly string[]): Topi
       description: pack.character.description || undefined,
       assetRights: pack.character.asset_rights || undefined,
       stages: [...stageUrls],
+      ...(secretUrl ? { secret: secretUrl } : {}),
     },
     questions: pack.questions,
   };
@@ -36,7 +40,8 @@ export interface ValidateOptions {
 
 /**
  * Everything the preset build checks, for a pack in the editor: the engine's
- * validateTopic plus image checks (all 11 stages, size, matching shape).
+ * validateTopic plus image checks (all 11 stages, size, matching shape, and
+ * the same size and shape rules for the optional secret image).
  */
 export function validatePack(pack: PackDraft, opts: ValidateOptions = {}): Issue[] {
   const where = `topic ${pack.topic.id || "(no id)"}`;
@@ -79,7 +84,7 @@ export function validatePack(pack: PackDraft, opts: ValidateOptions = {}): Issue
       message: missing.length === STAGE_COUNT ? "No stage images yet (00-10)." : `Missing stage image${missing.length > 1 ? "s" : ""} ${missing.join(", ")}.`,
     });
   }
-  const sized: { stage: number; w: number; h: number }[] = [];
+  const sized: { name: string; w: number; h: number }[] = [];
   pack.images.forEach((img, stage) => {
     if (!img) return;
     if (img.bytes.length > ZIP_LIMITS.maxImageBytes) {
@@ -89,8 +94,18 @@ export function validatePack(pack: PackDraft, opts: ValidateOptions = {}): Issue
         message: `Stage ${stageName(stage)} is ${(img.bytes.length / 1048576).toFixed(1)} MB (max 8 MB).`,
       });
     }
-    if (img.width && img.height) sized.push({ stage, w: img.width, h: img.height });
+    if (img.width && img.height) sized.push({ name: `Stage ${stageName(stage)}`, w: img.width, h: img.height });
   });
+  if (pack.secret) {
+    if (pack.secret.bytes.length > ZIP_LIMITS.maxImageBytes) {
+      issues.push({
+        level: "error",
+        where: `${charWhere} / images`,
+        message: `The secret image is ${(pack.secret.bytes.length / 1048576).toFixed(1)} MB (max 8 MB).`,
+      });
+    }
+    if (pack.secret.width && pack.secret.height) sized.push({ name: "The secret image", w: pack.secret.width, h: pack.secret.height });
+  }
   const first = sized[0];
   if (first) {
     const ratio = (s: { w: number; h: number }) => s.w / s.h;
@@ -100,7 +115,7 @@ export function validatePack(pack: PackDraft, opts: ValidateOptions = {}): Issue
       issues.push({
         level: sameShape ? "warning" : "error",
         where: `${charWhere} / images`,
-        message: `Stage ${stageName(s.stage)} is ${s.w}x${s.h} but stage ${stageName(first.stage)} is ${first.w}x${first.h}${sameShape ? " (same shape, different size)." : ". All stages need the same shape."}`,
+        message: `${s.name} is ${s.w}x${s.h} but ${first.name.charAt(0).toLowerCase()}${first.name.slice(1)} is ${first.w}x${first.h}${sameShape ? " (same shape, different size)." : ". All images need the same shape."}`,
       });
     }
   }

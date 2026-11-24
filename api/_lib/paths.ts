@@ -9,7 +9,7 @@ export const PRESETS_DIR = "content/presets/";
 
 /** Topic folder: the topic id, or "_" + id for a hidden draft (the build skips "_" folders). */
 export const FOLDER_PATTERN = /^_?[a-z0-9][a-z0-9_-]{0,63}$/;
-const PACK_FILE = /^(topic\.json|questions\.csv|character\/character\.json|character\/(0\d|10)\.(webp|png|jpg|jpeg|svg))$/;
+const PACK_FILE = /^(topic\.json|questions\.csv|character\/character\.json|character\/(0\d|10|secret)\.(webp|png|jpg|jpeg|svg))$/;
 const TEXT_FILE = /\.(json|csv)$/;
 
 export const LIMITS = {

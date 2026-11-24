@@ -1,15 +1,18 @@
-import { FINAL_STAGE, STAGE_COUNT } from "@kiss-n-tell/engine";
+import { FINAL_STAGE, MAX_SCORE, STAGE_COUNT } from "@kiss-n-tell/engine";
 import { StageViewer } from "@kiss-n-tell/ui";
 import { useRef, useState, type DragEvent } from "react";
 import { ImageUrls } from "./images.js";
 import { stageName, type PackDraft, type StageImage } from "./pack/index.js";
 
+/** A stage slot (0-10) or the optional secret image. */
+export type ImageSlot = number | "secret";
+
 interface Props {
   draft: PackDraft;
   urls: ImageUrls;
-  /** Files dropped or picked for a slot (or for the grid when stage is null). */
-  onFiles: (files: File[], stage: number | null) => void;
-  onRemove: (stage: number) => void;
+  /** Files dropped or picked for a slot (or for the grid when slot is null). */
+  onFiles: (files: File[], slot: ImageSlot | null) => void;
+  onRemove: (slot: ImageSlot) => void;
 }
 
 const LABELS: Record<number, string> = { 0: "Start", [FINAL_STAGE]: "Ending" };
@@ -22,12 +25,19 @@ function sizeText(img: StageImage) {
 
 export function ImagesPanel({ draft, urls, onFiles, onRemove }: Props) {
   const picker = useRef<HTMLInputElement>(null);
-  const target = useRef<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | "grid" | null>(null);
-  const [view, setView] = useState(0);
+  const target = useRef<ImageSlot | null>(null);
+  const [dragOver, setDragOver] = useState<ImageSlot | "grid" | null>(null);
+  const [stageView, setView] = useState(0);
+  const [showSecret, setShowSecret] = useState(false);
   const count = draft.images.filter(Boolean).length;
+  const secretOn = showSecret && !!draft.secret;
+  const view: ImageSlot = secretOn ? "secret" : stageView;
+  const showStage = (stage: number) => {
+    setView(stage);
+    setShowSecret(false);
+  };
 
-  const pick = (stage: number | null) => {
+  const pick = (stage: ImageSlot | null) => {
     target.current = stage;
     if (picker.current) {
       picker.current.multiple = stage === null;
@@ -35,7 +45,7 @@ export function ImagesPanel({ draft, urls, onFiles, onRemove }: Props) {
     }
   };
 
-  const drop = (e: DragEvent, stage: number | null) => {
+  const drop = (e: DragEvent, stage: ImageSlot | null) => {
     e.preventDefault();
     e.stopPropagation();
     setDragOver(null);
@@ -47,6 +57,7 @@ export function ImagesPanel({ draft, urls, onFiles, onRemove }: Props) {
     ...draft.character,
     assetRights: draft.character.asset_rights,
     stages: draft.images.map((img) => (img ? urls.get(img) : "")),
+    secret: draft.secret ? urls.get(draft.secret) : undefined,
     width: draft.images.find((i) => i?.width)?.width,
     height: draft.images.find((i) => i?.height)?.height,
   };
@@ -101,7 +112,7 @@ export function ImagesPanel({ draft, urls, onFiles, onRemove }: Props) {
               <button
                 type="button"
                 className="ed-slot__img"
-                onClick={() => (img ? setView(stage) : pick(stage))}
+                onClick={() => (img ? showStage(stage) : pick(stage))}
                 aria-label={img ? `Show stage ${stageName(stage)} in the preview` : `Choose an image for stage ${stageName(stage)}`}
               >
                 {img ? <img src={urls.get(img)} alt="" draggable={false} /> : <span className="ed-slot__plus">+</span>}
@@ -125,20 +136,67 @@ export function ImagesPanel({ draft, urls, onFiles, onRemove }: Props) {
         <p className="ed-hint">
           WebP, PNG, JPG or SVG, up to 8 MB each. All 11 must have the same shape; portrait 3:4 (for example 768×1024) fits the game best.
         </p>
+
+        <section className="ed-secret" aria-labelledby="ed-secret-title">
+          <div
+            className={`ed-slot ed-slot--secret${draft.secret ? "" : " ed-slot--empty"}${dragOver === "secret" ? " ed-slot--drag" : ""}${view === "secret" ? " ed-slot--view" : ""}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver("secret");
+            }}
+            onDragLeave={(e) => {
+              if (e.currentTarget === e.target) setDragOver(null);
+            }}
+            onDrop={(e) => drop(e, "secret")}
+          >
+            <button
+              type="button"
+              className="ed-slot__img"
+              onClick={() => (draft.secret ? setShowSecret(true) : pick("secret"))}
+              aria-label={draft.secret ? "Show the secret image in the preview" : "Choose a secret image"}
+            >
+              {draft.secret ? <img src={urls.get(draft.secret)} alt="" draggable={false} /> : <span className="ed-slot__plus">+</span>}
+            </button>
+            <div className="ed-slot__meta">
+              <span className="ed-slot__name">Secret</span>
+              <span className="ed-slot__info muted">{draft.secret ? sizeText(draft.secret) : "None"}</span>
+            </div>
+            {draft.secret && (
+              <div className="ed-slot__actions">
+                <button type="button" className="link-btn" onClick={() => pick("secret")} aria-label="Replace the secret image">Replace</button>
+                <button type="button" className="link-btn" onClick={() => onRemove("secret")} aria-label="Remove the secret image">Remove</button>
+              </div>
+            )}
+          </div>
+          <div className="ed-secret__text">
+            <h3 id="ed-secret-title" className="ed-secret__title">Secret image <span className="muted">(optional)</span></h3>
+            <p className="muted">
+              Shown only after a perfect run: Legendary on all 7 questions, {MAX_SCORE} points. The game never hints that it exists until
+              then. Same shape and size rules as the stages. A file named <code>secret</code> (for example secret.webp) picked with the
+              others lands here.
+            </p>
+          </div>
+        </section>
       </div>
       <aside className="ed-images__preview" aria-label="Preview as in the game">
-        <StageViewer character={character} stage={view} celebrate={view === FINAL_STAGE} />
+        <StageViewer character={character} stage={stageView} celebrate={!secretOn && stageView === FINAL_STAGE} secret={secretOn} />
         <label className="ed-field__label" htmlFor="ed-stage-range">
-          Stage {view} of {FINAL_STAGE}
+          {secretOn ? "Secret image (perfect run)" : `Stage ${stageView} of ${FINAL_STAGE}`}
         </label>
         <input
           id="ed-stage-range"
           type="range"
           min={0}
           max={FINAL_STAGE}
-          value={view}
-          onChange={(e) => setView(Number(e.target.value))}
+          value={stageView}
+          onChange={(e) => showStage(Number(e.target.value))}
         />
+        {draft.secret && (
+          <label className="ed-check-row">
+            <input type="checkbox" checked={secretOn} onChange={(e) => setShowSecret(e.target.checked)} /> Show the secret image
+          </label>
+        )}
       </aside>
     </div>
   );

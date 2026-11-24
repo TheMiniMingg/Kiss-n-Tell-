@@ -11,6 +11,7 @@ describe("editable paths", () => {
       "content/presets/space/character/00.webp",
       "content/presets/space/character/10.svg",
       "content/presets/_draft-1/character/05.jpeg",
+      "content/presets/space/character/secret.webp",
     ]) {
       expect(isEditablePath(p), p).toBe(true);
     }
@@ -22,6 +23,9 @@ describe("editable paths", () => {
       "content/presets/space/character/11.webp",
       "content/presets/space/character/5.webp",
       "content/presets/space/character/00.gif",
+      "content/presets/space/character/secret.gif",
+      "content/presets/space/character/Secret.webp",
+      "content/presets/space/secret.webp",
       "content/presets/../../api/edit.ts",
       "content/presets/Space/topic.json",
       "content/presets/space/../space/topic.json",

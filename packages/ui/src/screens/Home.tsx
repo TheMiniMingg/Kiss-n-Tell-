@@ -67,7 +67,8 @@ export function Home({ topics, links, site, onPlay, editor }: Props) {
                         <span>{t.character.name}</span>
                         {best ? (
                           <span className={best.won ? "topic__best topic__best--won" : "topic__best"}>
-                            Best {best.score}/{MAX_SCORE}{best.won ? " · ending unlocked" : ""}
+                            Best {best.score}/{MAX_SCORE}
+                            {best.score >= MAX_SCORE && t.character.secret ? " · secret unlocked" : best.won ? " · ending unlocked" : ""}
                           </span>
                         ) : (
                           <span className="topic__best">Not played yet</span>

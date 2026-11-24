@@ -145,7 +145,7 @@ test("images: named files go to their stage, others fill gaps; bad files are ski
   // A different shape is an error.
   await page.getByTestId("image-input").setInputFiles(stageFiles(11, 400, 300).slice(1, 2));
   await page.getByRole("tab", { name: /Check/ }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("All stages need the same shape");
+  await expect(page.getByRole("tabpanel")).toContainText("All images need the same shape");
 });
 
 test("copy a built-in topic as a starting point", async ({ page }) => {
@@ -261,4 +261,92 @@ test("narrow window: no sideways scrolling", async ({ page }) => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow, tab).toBeLessThanOrEqual(0);
   }
+});
+
+test("secret image: optional slot, picked by name or directly, saved, exported and shown after a perfect preview run", async ({ page }) => {
+  await makePack(page, "Secret Pack");
+  // Playable without a secret.
+  await expect(page.locator(".ed-head .pill--good")).toHaveText("Playable");
+  await expect(page.getByRole("button", { name: "Choose a secret image" })).toBeVisible();
+
+  // A file named "secret" picked with others goes to the secret slot, not a stage.
+  await page.getByTestId("image-input").setInputFiles([{ name: "secret.svg", mimeType: "image/svg+xml", buffer: Buffer.from(stageFiles(1)[0]!.buffer) }]);
+  await expect(page.getByRole("status")).toContainText("Image added");
+  await expect(page.getByRole("button", { name: "Show the secret image in the preview" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Images/ })).toContainText("11/11");
+
+  // Preview toggle.
+  await page.getByRole("checkbox", { name: "Show the secret image" }).check();
+  await expect(page.locator(".ed-images__preview .stage__count")).toHaveText("Secret");
+  await page.getByRole("checkbox", { name: "Show the secret image" }).uncheck();
+  await expect(page.locator(".ed-images__preview .stage__count")).not.toHaveText("Secret");
+
+  // A different shape is an error, like a stage.
+  await page.getByRole("button", { name: "Replace the secret image" }).click();
+  await page.getByTestId("image-input").setInputFiles(stageFiles(1, 400, 300));
+  await page.getByRole("tab", { name: /Check/ }).click();
+  await expect(page.getByRole("tabpanel")).toContainText("The secret image is 400x300");
+  await page.getByRole("tab", { name: /Images/ }).click();
+  await page.getByRole("button", { name: "Replace the secret image" }).click();
+  await page.getByTestId("image-input").setInputFiles(stageFiles(1));
+  await expect(page.locator(".ed-head .pill--good")).toHaveText("Playable");
+
+  // Saved, and still there after a reload.
+  await saveButton(page).click();
+  await expect(page.getByRole("status")).toContainText("Saved");
+  await page.reload();
+  await page.getByRole("button", { name: "Make your own packs" }).click();
+  await page.getByRole("complementary", { name: "Your packs" }).getByRole("button", { name: /Secret Pack/ }).click();
+  await page.getByRole("tab", { name: /Images/ }).click();
+  await expect(page.getByRole("button", { name: "Show the secret image in the preview" })).toBeVisible();
+
+  // In the exported ZIP.
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export ZIP" }).click();
+  const zip = unzipSync(new Uint8Array(readFileSync(await (await download).path())));
+  expect(Object.keys(zip)).toContain("secret-pack/character/secret.svg");
+
+  // A perfect preview run reveals it.
+  await page.getByRole("button", { name: "Preview run" }).click();
+  for (let i = 0; i < 7; i++) {
+    await page.getByPlaceholder("One word").fill(WORDS.legendary);
+    await page.getByRole("button", { name: "Submit" }).click();
+    await page.waitForTimeout(400);
+    await page.getByRole("button", { name: /Next question|See results/ }).click();
+  }
+  await expect(page.getByRole("heading", { name: "Secret unlocked!" })).toBeVisible();
+  await page.getByRole("button", { name: "Back to editor" }).first().click();
+
+  // Remove it again.
+  await page.getByRole("tab", { name: /Images/ }).click();
+  await page.getByRole("button", { name: "Remove the secret image" }).click();
+  await expect(page.getByRole("button", { name: "Choose a secret image" })).toBeVisible();
+});
+
+test("a single file dropped on a stage slot goes to that stage even if it's named secret", async ({ page }) => {
+  await page.getByRole("main").getByRole("button", { name: "New pack" }).click();
+  await page.getByRole("button", { name: "Blank pack" }).click();
+  await page.getByRole("tab", { name: /Images/ }).click();
+  await page.getByRole("button", { name: "Choose an image for stage 04" }).click();
+  await page.getByTestId("image-input").setInputFiles([{ name: "secret.svg", mimeType: "image/svg+xml", buffer: stageFiles(1)[0]!.buffer }]);
+  await expect(page.getByRole("button", { name: "Show stage 04 in the preview" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Choose a secret image" })).toBeVisible();
+});
+
+test("imports a ZIP with a secret image", async ({ page }) => {
+  await page.getByTestId("zip-input").setInputFiles({
+    name: "zipped.zip",
+    mimeType: "application/zip",
+    buffer: packZip("zipped", "Zipped", { "zipped/character/secret.svg": new Uint8Array(stageFiles(1)[0]!.buffer) }),
+  });
+  await page.getByRole("tab", { name: /Images/ }).click();
+  await expect(page.getByRole("button", { name: "Show the secret image in the preview" })).toBeVisible();
+});
+
+test("copying a built-in topic keeps its secret image", async ({ page }) => {
+  await page.getByRole("main").getByRole("button", { name: "New pack" }).click();
+  await page.getByRole("button", { name: /Copy “Animals”/ }).click();
+  await expect(page.getByRole("status")).toContainText('Copied "Animals"');
+  await page.getByRole("tab", { name: /Images/ }).click();
+  await expect(page.getByRole("button", { name: "Show the secret image in the preview" })).toBeVisible();
 });

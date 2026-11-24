@@ -43,10 +43,10 @@ function validPack(): PackDraft {
 
 describe("pack paths", () => {
   it("accepts only the preset layout", () => {
-    for (const ok of ["topic.json", "questions.csv", "character/character.json", "character/00.webp", "character/10.svg", "character/05.jpeg"]) {
+    for (const ok of ["topic.json", "questions.csv", "character/character.json", "character/00.webp", "character/10.svg", "character/05.jpeg", "character/secret.webp", "character/secret.svg"]) {
       expect(isPackPath(ok), ok).toBe(true);
     }
-    for (const bad of ["character/11.png", "character/5.png", "character/00.gif", "../topic.json", "a/topic.json", "character/x.png", "notes.txt", "character/00.PNG"]) {
+    for (const bad of ["character/11.png", "character/5.png", "character/00.gif", "../topic.json", "a/topic.json", "character/x.png", "notes.txt", "character/00.PNG", "character/secret.gif", "secret.png", "character/Secret.png", "character/secret-2.png"]) {
       expect(isPackPath(bad), bad).toBe(false);
     }
   });
@@ -70,6 +70,28 @@ describe("files round trip", () => {
     expect(again.character.placeholder_color).toBe("#123456");
     expect(again.questions).toEqual(pack.questions);
     expect(again.images.map((i) => i?.bytes.length)).toEqual(pack.images.map((i) => i?.bytes.length));
+    expect(pack.secret).not.toBeNull();
+    expect(again.secret?.ext).toBe(pack.secret?.ext);
+    expect(again.secret?.bytes).toEqual(pack.secret?.bytes);
+  });
+
+  it("the secret image is optional and only written when present", () => {
+    const pack = validPack();
+    expect([...packToFiles(pack).keys()]).toContain("character/secret.svg");
+    pack.secret = null;
+    const files = packToFiles(pack);
+    expect([...files.keys()].some((k) => k.includes("secret"))).toBe(false);
+    const again = packFromFiles(files);
+    expect(again.pack.secret).toBeNull();
+    expect(validatePack(again.pack).filter((i) => i.level === "error")).toEqual([]);
+  });
+
+  it("keeps the first of two secret images", () => {
+    const files = presetFiles("animals");
+    files.set("character/secret.png", new Uint8Array([1, 2, 3]));
+    const { pack, issues } = packFromFiles(files);
+    expect(pack.secret).not.toBeNull();
+    expect(issues).toContainEqual(expect.objectContaining({ level: "error", message: expect.stringMatching(/More than one secret image/) }));
   });
 
   it("reports missing and broken files instead of throwing", () => {
@@ -103,6 +125,7 @@ describe("ZIP export and import", () => {
     expect(issues.filter((i) => i.level === "error")).toEqual([]);
     expect(back.questions).toEqual(pack.questions);
     expect(back.topic.id).toBe(pack.topic.id);
+    expect(Array.from(back.secret?.bytes ?? [])).toEqual(Array.from(pack.secret?.bytes ?? []));
   });
 
   it("is reproducible", () => {
@@ -198,6 +221,17 @@ describe("validatePack", () => {
     expect(issues).toContainEqual(expect.objectContaining({ level: "warning", message: expect.stringMatching(/Stage 01 .*same shape/) }));
     expect(issues).toContainEqual(expect.objectContaining({ level: "error", message: expect.stringMatching(/Stage 02 .*same shape/) }));
     expect(issues).toContainEqual(expect.objectContaining({ level: "error", message: expect.stringMatching(/Stage 04 is 8.0 MB/) }));
+  });
+
+  it("checks the secret image's shape and size like a stage", () => {
+    const pack = validPack();
+    pack.images.forEach((img) => img && Object.assign(img, { width: 768, height: 1024 }));
+    pack.secret = { ext: "png", bytes: new Uint8Array(10), width: 1024, height: 768 };
+    expect(validatePack(pack)).toContainEqual(
+      expect.objectContaining({ level: "error", message: expect.stringMatching(/The secret image is 1024x768 but stage 00 is 768x1024/) }),
+    );
+    pack.secret = { ext: "png", bytes: new Uint8Array(ZIP_LIMITS.maxImageBytes + 1) };
+    expect(validatePack(pack)).toContainEqual(expect.objectContaining({ level: "error", message: expect.stringMatching(/secret image is 8.0 MB/) }));
   });
 
   it("flags id clashes and an underage character", () => {

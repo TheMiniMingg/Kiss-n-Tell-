@@ -50,6 +50,8 @@ export interface PackDraft {
   questions: Question[];
   /** Always STAGE_COUNT long; index = stage (00-10). */
   images: (StageImage | null)[];
+  /** Optional character/secret.<ext>, shown only after a perfect run. */
+  secret: StageImage | null;
 }
 
 export const ID_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
@@ -100,6 +102,7 @@ export function newPack(id: string, title: string): PackDraft {
     character: { id: `${id}-character`.slice(0, MAX_ID_LENGTH), name: "", age: 18, species: "", asset_rights: "" },
     questions: [],
     images: emptyImages(),
+    secret: null,
   };
 }
 
@@ -112,6 +115,7 @@ export function clonePack(p: PackDraft): PackDraft {
       answers: { common: [...q.answers.common], rare: [...q.answers.rare], legendary: [...q.answers.legendary] },
     })),
     images: p.images.map((img) => (img ? { ...img } : null)),
+    secret: p.secret ? { ...p.secret } : null,
   };
 }
 

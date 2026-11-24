@@ -143,10 +143,30 @@ export function nextQuestion(state: RunState, now: number): RunState {
   return { ...state, index, phase: "question", deadline: now + q.timerSeconds * 1000 };
 }
 
+/** Most points this run could score: a Legendary answer on every question. */
+export function maxScoreFor(state: RunState): number {
+  return state.questions.length * TIER_POINTS.legendary;
+}
+
+/**
+ * True while every question answered so far was Legendary, so the run can
+ * still end perfect. Used to fetch the secret image just before it's needed.
+ */
+export function onPerfectTrack(state: RunState): boolean {
+  return state.score === state.results.length * TIER_POINTS.legendary;
+}
+
+/** A finished run with a Legendary answer on every question: unlocks the secret image. */
+export function isPerfect(state: RunState): boolean {
+  return state.phase === "finished" && state.results.length === state.questions.length && state.score === maxScoreFor(state);
+}
+
 export interface RunSummary {
   score: number;
   maxScore: number;
   won: boolean;
+  /** Every answer Legendary (score === maxScore). */
+  perfect: boolean;
   stage: number;
   wonAtQuestion: number | null;
   counts: Record<QuestionResult["outcome"], number>;
@@ -157,8 +177,9 @@ export function summarize(state: RunState): RunSummary {
   for (const r of state.results) counts[r.outcome]++;
   return {
     score: state.score,
-    maxScore: state.questions.length * TIER_POINTS.legendary,
+    maxScore: maxScoreFor(state),
     won: hasWon(state.score),
+    perfect: isPerfect(state),
     stage: stageForScore(state.score),
     wonAtQuestion: state.wonAtQuestion,
     counts,

@@ -6,7 +6,7 @@ A [Tauri v2](https://v2.tauri.app) app that wraps the game from `packages/ui` an
 
 - **Topic & character:** title, id, description, sort order; character name, id, age (18+), species, description and `asset_rights`.
 - **Questions:** prompt, question id, timer (5-120 s) and the Common (+1), Rare (+2) and Legendary (+3) word lists, one word per line. Import or export the whole list as `questions.csv` (the same format as the presets, so you can write questions in a spreadsheet).
-- **Images:** the 11 stage images `00` (start) to `10` (ending) with thumbnails and an in-game preview. Pick several files at once: files with a stage number in the name go to that stage, others fill the empty slots. WebP, PNG, JPG or SVG, max 8 MB each, all the same shape.
+- **Images:** the 11 stage images `00` (start) to `10` (ending) with thumbnails and an in-game preview. Pick several files at once: files with a stage number in the name go to that stage, others fill the empty slots. WebP, PNG, JPG or SVG, max 8 MB each, all the same shape. Below them is an optional **secret image** slot: it's shown only after a perfect run (Legendary on all 7 questions, 21 points). A file named `secret` picked with the others goes there.
 - **Check:** runs the engine's `validateTopic` plus the image checks from the preset build. Errors block play; warnings are advice. "Show" jumps to the problem.
 - **Preview run:** plays a real 7-question run of the pack being edited, with the game's own screens. Nothing is recorded.
 - **Copy a built-in topic** as a starting point, **import** a pack ZIP, **export** a pack ZIP.
@@ -24,6 +24,7 @@ A pack is a folder with the same layout as `content/presets/<id>`:
   character/
     character.json
     00.webp ... 10.webp
+    secret.webp            (optional)
 ```
 
 An exported ZIP contains that folder, so unzipping it into `content/presets/` adds it to the website (run `pnpm content:check` afterwards). Import accepts the files inside a single folder or at the root of the ZIP.

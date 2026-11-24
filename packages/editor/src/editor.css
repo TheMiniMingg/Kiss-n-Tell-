@@ -511,6 +511,36 @@
   background: var(--surface);
   border: 1px solid var(--border);
 }
+.ed-secret {
+  display: grid;
+  grid-template-columns: minmax(110px, 150px) 1fr;
+  gap: 14px;
+  align-items: start;
+  margin-top: 14px;
+  padding: 8px;
+}
+.ed-slot--secret {
+  border-color: color-mix(in srgb, var(--legendary, #ffc94d) 45%, var(--border));
+}
+.ed-secret__title {
+  margin: 4px 0 6px;
+  font-size: 1rem;
+}
+.ed-secret__text p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+.ed-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+@media (max-width: 520px) {
+  .ed-secret {
+    grid-template-columns: 1fr;
+  }
+}
 .ed-slot--view {
   border-color: var(--accent);
 }
