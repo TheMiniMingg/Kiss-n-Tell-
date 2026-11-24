@@ -1,7 +1,7 @@
 import { STAGE_COUNT, questionsFromCsv, questionsToCsv, type Issue } from "@kiss-n-tell/engine";
 import { Modal, loadManifest, type GameTopic } from "@kiss-n-tell/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ImageUrls, imageExtOf, measureAll, measureImage, placeImages } from "./images.js";
+import { ImageUrls, imageExtOf, isSecretName, measureAll, measureImage, placeImages } from "./images.js";
 import {
   PackZipError,
   ZIP_LIMITS,
@@ -21,7 +21,7 @@ import {
 } from "./pack/index.js";
 import { packGameTopic, packIssues, type LoadResult, type SavedPack } from "./packs.js";
 import type { PackStore } from "./store.js";
-import { ImagesPanel } from "./ImagesPanel.js";
+import { ImagesPanel, type ImageSlot } from "./ImagesPanel.js";
 import { IssueList, countIssues, issueTarget, type EditorTab } from "./IssueList.js";
 import { PreviewRun } from "./PreviewRun.js";
 import { QuestionsPanel } from "./QuestionsPanel.js";
@@ -123,8 +123,8 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
 
   // Release object URLs of images no longer in the open pack.
   useEffect(() => {
-    urls.current.retain(open?.draft.images ?? []);
-  }, [open?.draft.images]);
+    urls.current.retain([...(open?.draft.images ?? []), open?.draft.secret ?? null]);
+  }, [open?.draft.images, open?.draft.secret]);
 
   // Clear a status message after a while.
   useEffect(() => {
@@ -211,12 +211,19 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
           if (res.ok) images[stage] = { ext, bytes: new Uint8Array(await res.arrayBuffer()) };
         }),
       );
+      let secret: StageImage | null = null;
+      if (t.character.secret) {
+        const ext = new URL(t.character.secret).pathname.split(".").pop()?.toLowerCase() ?? "";
+        const res = isImageExt(ext) ? await fetch(t.character.secret) : null;
+        if (res?.ok && isImageExt(ext)) secret = { ext, bytes: new Uint8Array(await res.arrayBuffer()) };
+      }
       const id = uniqueId(`${t.id}-copy`, takenIds());
       const draft: PackDraft = {
         topic: { id, title: `${t.title} (copy)`, description: t.description ?? "" },
         character: { id: t.character.id, name: t.character.name, age: t.character.age, description: t.character.description ?? "", asset_rights: t.character.assetRights ?? "" },
         questions: t.questions.map((q) => ({ ...q, answers: { common: [...q.answers.common], rare: [...q.answers.rare], legendary: [...q.answers.legendary] } })),
         images: await measureAll(images),
+        secret: (await measureAll([secret]))[0] ?? null,
       };
       startNew(draft, `Copied "${t.title}". Change what you like, then save.`);
     } catch (e) {
@@ -235,6 +242,7 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
     try {
       const { pack, issues: found } = importPackZip(await readFile(file), slugify(file.name.replace(/\.zip$/i, "")) || "imported");
       pack.images = await measureAll(pack.images);
+      pack.secret = (await measureAll([pack.secret]))[0] ?? null;
       const notes: Issue[] = [...found];
       const original = pack.topic.id;
       if (takenIds().includes(original)) {
@@ -371,7 +379,7 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
     });
   };
 
-  const addImages = async (files: File[], stage: number | null) => {
+  const addImages = async (files: File[], stage: ImageSlot | null) => {
     if (!open) return;
     const problems: string[] = [];
     const loaded: { img: StageImage; name: string }[] = [];
@@ -393,11 +401,27 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
       }
       loaded.push({ img: { ...img, ...size }, name: f.name });
     }
+    // The secret slot takes a file picked for it, or a file named "secret" among several.
+    // A single file put on a stage slot always goes to that stage.
+    const onStage = files.length === 1 && typeof stage === "number";
+    const named = onStage || stage === "secret" ? [] : loaded.filter((l) => isSecretName(l.name));
+    for (const l of named.slice(1)) problems.push(`only one secret image, so ${l.name} was skipped`);
+    const secret = (stage === "secret" ? loaded[0] : named[0])?.img ?? null;
+    const rest = stage === "secret" ? [] : loaded.filter((l) => !named.includes(l));
     const current = openRef.current?.draft.images ?? [];
-    const { placed, unplaced } = placeImages(current, loaded.map((l) => ({ name: l.name, value: l.img })), files.length === 1 ? stage : null);
+    const { placed, unplaced } = placeImages(
+      current,
+      rest.map((l) => ({ name: l.name, value: l.img })),
+      onStage ? (stage as number) : null,
+    );
     for (const name of unplaced) problems.push(`no empty stage left for ${name}`);
-    if (placed.size) update((d) => placed.forEach((img, s) => void (d.images[s] = img)));
-    const count = placed.size;
+    if (placed.size || secret) {
+      update((d) => {
+        placed.forEach((img, s) => void (d.images[s] = img));
+        if (secret) d.secret = secret;
+      });
+    }
+    const count = placed.size + (secret ? 1 : 0);
     setStatus(
       problems.length
         ? { tone: "error", text: `${count ? `Added ${count}. ` : ""}Skipped: ${problems.join("; ")}.` }
@@ -599,12 +623,12 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
             {site ? (
               <p className="muted">
                 Pick a topic on the left to change its questions, answers, character or images, or start a new one. Each topic needs a question pool
-                (at least 7, each run draws 7 at random), a character, and 11 stage images from 00 (start) to 10 (ending). Saving commits the change
+                (at least 7, each run draws 7 at random), a character, and 11 stage images from 00 (start) to 10 (ending), plus an optional secret image for a perfect run. Saving commits the change
                 to the game's content on GitHub and the live site updates after the deploy. Topics with errors are saved as hidden drafts.
               </p>
             ) : (
               <p className="muted">
-                A pack is one topic: a question pool (at least 7, each run draws 7 at random), a character, and 11 stage images from 00 (start) to 10 (ending).
+                A pack is one topic: a question pool (at least 7, each run draws 7 at random), a character, and 11 stage images from 00 (start) to 10 (ending), plus an optional secret image for a perfect run.
                 Saved packs with no errors show up on the topic list as "My pack". Export a pack as a ZIP to share it or to add it to the game's presets.
               </p>
             )}
@@ -684,7 +708,12 @@ export function Editor({ store, variant = "local", saved, loadError, presets, re
                   draft={open.draft}
                   urls={urls.current}
                   onFiles={(files, stage) => void addImages(files, stage)}
-                  onRemove={(stage) => update((d) => void (d.images[stage] = null))}
+                  onRemove={(slot) =>
+                    update((d) => {
+                      if (slot === "secret") d.secret = null;
+                      else d.images[slot] = null;
+                    })
+                  }
                 />
               )}
               {tab === "check" && (

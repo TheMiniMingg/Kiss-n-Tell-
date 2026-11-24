@@ -27,6 +27,7 @@ export async function loadAllPacks(store: PackStore): Promise<LoadResult> {
         try {
           const { pack, issues } = packFromFiles(await store.load(folder), folder);
           pack.images = await measureAll(pack.images);
+          pack.secret = (await measureAll([pack.secret]))[0] ?? null;
           return { folder, pack, loadIssues: issues };
         } catch (e) {
           failures.push({ folder, message: (e as Error).message });
@@ -56,14 +57,14 @@ export function playableTopics(packs: readonly SavedPack[], presetIds: readonly 
     if (!isPlayable(packIssues(saved, packs, presetIds))) continue;
     out.push(packGameTopic(saved.pack, urls, `${LOCAL_PREFIX}${saved.folder}`));
   }
-  urls.retain(packs.flatMap((p) => p.pack.images));
+  urls.retain(packs.flatMap((p) => [...p.pack.images, p.pack.secret]));
   return out;
 }
 
 /** A pack as a game topic, with object URLs for its images. Missing images become empty strings. */
 export function packGameTopic(pack: PackDraft, urls: ImageUrls, id: string): GameTopic {
   const stages = pack.images.map((img) => (img ? urls.get(img) : ""));
-  const topic = packToTopic(pack, stages);
+  const topic = packToTopic(pack, stages, pack.secret ? urls.get(pack.secret) : undefined);
   const first = pack.images.find((i) => i?.width && i?.height);
   return {
     ...topic,

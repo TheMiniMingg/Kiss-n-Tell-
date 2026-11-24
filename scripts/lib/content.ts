@@ -4,6 +4,7 @@ import { extname, join } from "node:path";
 import { imageSize } from "image-size";
 import {
   ALLOWED_IMAGE_EXTENSIONS,
+  SECRET_IMAGE_NAME,
   STAGE_COUNT,
   questionsFromCsv,
   validateTopic,
@@ -37,16 +38,45 @@ export interface StageFile {
   height?: number;
 }
 
+export interface SecretFile {
+  file: string;
+  absPath: string;
+  hash: string;
+  width?: number;
+  height?: number;
+}
+
 export interface LoadedTopic {
   dir: string;
   meta: TopicMeta;
   topic: Topic;
   stageFiles: StageFile[];
+  /** Optional character/secret.<ext>, unlocked by a perfect run. */
+  secretFile: SecretFile | null;
   issues: Issue[];
 }
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const STAGE_FILE = /^(\d{2})\.([a-z0-9]+)$/i;
+const SECRET_FILE = new RegExp(`^${SECRET_IMAGE_NAME}\\.([a-z0-9]+)$`, "i");
+
+/** Read an image file: size limit, dimensions and a short content hash. */
+function readImage(absPath: string, file: string, issues: Issue[], where: string): { hash: string; width?: number; height?: number } {
+  const buf = readFileSync(absPath);
+  if (buf.length > MAX_IMAGE_BYTES) {
+    issues.push({ level: "error", where, message: `${file} is ${(buf.length / 1048576).toFixed(1)} MB (max 8 MB).` });
+  }
+  let width: number | undefined;
+  let height: number | undefined;
+  try {
+    const dim = imageSize(buf);
+    width = dim.width;
+    height = dim.height;
+  } catch {
+    issues.push({ level: "error", where, message: `${file} is not a readable image.` });
+  }
+  return { hash: createHash("sha256").update(buf).digest("hex").slice(0, 10), width, height };
+}
 
 function readJson<T>(path: string, issues: Issue[], where: string): T | null {
   try {
@@ -72,15 +102,24 @@ export function loadTopic(dir: string): LoadedTopic | null {
     ? questionsFromCsv(readFileSync(csvPath, "utf8"), `${folder}/questions.csv`)
     : { questions: [], issues: [{ level: "error" as const, where, message: "Missing questions.csv." }] };
   issues.push(...csvIssues);
-  if (!meta || !charMeta) return { dir, meta: meta ?? { id: folder, title: folder }, topic: null as unknown as Topic, stageFiles: [], issues };
+  if (!meta || !charMeta) return { dir, meta: meta ?? { id: folder, title: folder }, topic: null as unknown as Topic, stageFiles: [], secretFile: null, issues };
 
   if (meta.id !== folder) issues.push({ level: "error", where, message: `topic.json id "${meta.id}" must match the folder name "${folder}".` });
 
   // Stage images: exactly one file per stage 00..10.
   const stageFiles: StageFile[] = [];
   const byStage = new Map<number, string[]>();
+  const secrets: string[] = [];
   if (existsSync(charDir)) {
     for (const f of readdirSync(charDir)) {
+      const sm = SECRET_FILE.exec(f);
+      if (sm) {
+        const ext = (sm[1] as string).toLowerCase();
+        if (!(ALLOWED_IMAGE_EXTENSIONS as readonly string[]).includes(ext)) {
+          issues.push({ level: "error", where: `${where} / character`, message: `${f}: unsupported image type .${ext}. Use ${ALLOWED_IMAGE_EXTENSIONS.join(", ")}.` });
+        } else secrets.push(f);
+        continue;
+      }
       const m = STAGE_FILE.exec(f);
       if (!m) continue;
       const stage = Number(m[1]);
@@ -109,32 +148,27 @@ export function loadTopic(dir: string): LoadedTopic | null {
     }
     const file = files[0] as string;
     const absPath = join(charDir, file);
-    const buf = readFileSync(absPath);
-    if (buf.length > MAX_IMAGE_BYTES) {
-      issues.push({ level: "error", where: `${where} / character`, message: `${file} is ${(buf.length / 1048576).toFixed(1)} MB (max 8 MB).` });
-    }
-    let width: number | undefined;
-    let height: number | undefined;
-    try {
-      const dim = imageSize(buf);
-      width = dim.width;
-      height = dim.height;
-    } catch {
-      issues.push({ level: "error", where: `${where} / character`, message: `${file} is not a readable image.` });
-    }
-    stageFiles.push({ stage: s, file, absPath, hash: createHash("sha256").update(buf).digest("hex").slice(0, 10), width, height });
+    stageFiles.push({ stage: s, file, absPath, ...readImage(absPath, file, issues, `${where} / character`) });
   }
-  const sized = stageFiles.filter((f) => f.width && f.height);
+  let secretFile: SecretFile | null = null;
+  if (secrets.length > 1) {
+    issues.push({ level: "error", where: `${where} / character`, message: `More than one secret image: ${secrets.sort().join(", ")}. Keep one.` });
+  } else if (secrets.length === 1) {
+    const file = secrets[0] as string;
+    const absPath = join(charDir, file);
+    secretFile = { file, absPath, ...readImage(absPath, file, issues, `${where} / character`) };
+  }
+  const sized: { file: string; width?: number; height?: number }[] = [...stageFiles, ...(secretFile ? [secretFile] : [])].filter((f) => f.width && f.height);
   if (sized.length > 1) {
-    const [first] = sized as [StageFile];
-    const ratio = (f: StageFile) => (f.width as number) / (f.height as number);
+    const [first] = sized as [(typeof sized)[number]];
+    const ratio = (f: { width?: number; height?: number }) => (f.width as number) / (f.height as number);
     for (const f of sized) {
       if (f.width !== first.width || f.height !== first.height) {
         const sameRatio = Math.abs(ratio(f) - ratio(first)) < 0.01;
         issues.push({
           level: sameRatio ? "warning" : "error",
           where: `${where} / character`,
-          message: `${f.file} is ${f.width}x${f.height} but ${first.file} is ${first.width}x${first.height}${sameRatio ? " (same shape, different size)" : ". All stages must have the same aspect ratio"}.`,
+          message: `${f.file} is ${f.width}x${f.height} but ${first.file} is ${first.width}x${first.height}${sameRatio ? " (same shape, different size)" : ". All character images (stages and secret) must have the same aspect ratio"}.`,
         });
       }
     }
@@ -151,11 +185,12 @@ export function loadTopic(dir: string): LoadedTopic | null {
       description: charMeta.description,
       assetRights: charMeta.asset_rights,
       stages: stageFiles.length === STAGE_COUNT ? stageFiles.map((f) => f.file) : [],
+      ...(secretFile ? { secret: secretFile.file } : {}),
     },
     questions,
   };
   issues.push(...validateTopic(topic).filter((i) => !(topic.character.stages.length === 0 && /stage images/.test(i.message))));
-  return { dir, meta, topic, stageFiles, issues };
+  return { dir, meta, topic, stageFiles, secretFile, issues };
 }
 
 export function listTopicDirs(presetsDir: string): string[] {

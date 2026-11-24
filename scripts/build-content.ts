@@ -4,13 +4,14 @@
  *
  *   manifest.json          site settings (content/site.json), all topics, questions and stage image URLs
  *   <topic-id>/NN.<ext>     stage images
+ *   <topic-id>/<hash>.<ext> the optional secret image (named by content hash, so the URL isn't guessable from the stage names)
  *
  * Usage:
  *   pnpm content:build      validate + write (fails on errors)
  *   pnpm content:check      validate only
  */
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { extname, join } from "node:path";
 import { parseSiteConfig, type Issue } from "@kiss-n-tell/engine";
 import { listTopicDirs, loadTopic, stageExt, type LoadedTopic } from "./lib/content.js";
 
@@ -72,10 +73,17 @@ const manifest = {
       return `content/${t.meta.id}/${name}?v=${f.hash}`;
     });
     const first = t.stageFiles[0];
+    let secret: string | undefined;
+    if (t.secretFile) {
+      const name = `${t.secretFile.hash}${extname(t.secretFile.file).toLowerCase()}`;
+      copyFileSync(t.secretFile.absPath, join(outDir, name));
+      secret = `content/${t.meta.id}/${name}`;
+    }
+    const { secret: _src, ...character } = t.topic.character;
     return {
       ...t.topic,
       sample: t.meta.sample ?? false,
-      character: { ...t.topic.character, stages, width: first?.width, height: first?.height },
+      character: { ...character, stages, ...(secret ? { secret } : {}), width: first?.width, height: first?.height },
     };
   }),
 };

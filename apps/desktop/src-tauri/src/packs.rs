@@ -7,6 +7,7 @@
 //!   <app data>/packs/<id>/questions.csv
 //!   <app data>/packs/<id>/character/character.json
 //!   <app data>/packs/<id>/character/00.webp .. 10.webp
+//!   <app data>/packs/<id>/character/secret.webp   (optional, perfect-run image)
 //!
 //! Saves are written to a staging folder first and swapped in at the end,
 //! so a crash mid-save never leaves a half-written pack.
@@ -42,6 +43,9 @@ pub fn valid_pack_path(path: &str) -> bool {
     }
     let Some(file) = path.strip_prefix("character/") else { return false };
     let Some((stem, ext)) = file.split_once('.') else { return false };
+    if stem == "secret" {
+        return IMAGE_EXTS.contains(&ext);
+    }
     stem.len() == 2
         && stem.chars().all(|c| c.is_ascii_digit())
         && stem.parse::<u32>().map(|n| n <= 10).unwrap_or(false)
@@ -305,10 +309,10 @@ mod tests {
         for bad in ["", "-a", "A", "a/b", "..", "a.b", "a b", &"a".repeat(65)] {
             assert!(!valid_id(bad), "{bad}");
         }
-        for ok in ["topic.json", "questions.csv", "character/character.json", "character/00.webp", "character/10.svg", "character/07.jpeg"] {
+        for ok in ["topic.json", "questions.csv", "character/character.json", "character/00.webp", "character/10.svg", "character/07.jpeg", "character/secret.webp", "character/secret.png"] {
             assert!(valid_pack_path(ok), "{ok}");
         }
-        for bad in ["../topic.json", "character/11.png", "character/1.png", "character/00.gif", "character/../topic.json", "/topic.json", "character\\00.png", "character/00.png.exe", "x/topic.json"] {
+        for bad in ["../topic.json", "character/11.png", "character/1.png", "character/00.gif", "character/../topic.json", "/topic.json", "character\\00.png", "character/00.png.exe", "x/topic.json", "character/secret.gif", "character/Secret.png", "character/secret.png.exe", "secret.png", "character/secret"] {
             assert!(!valid_pack_path(bad), "{bad}");
         }
     }

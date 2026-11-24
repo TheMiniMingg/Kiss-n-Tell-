@@ -30,6 +30,8 @@ export async function loadManifest(url: string, signal?: AbortSignal): Promise<M
   const root = new URL("..", base);
   for (const t of data.topics) {
     t.character.stages = t.character.stages.map((s) => new URL(s, root).href);
+    if (t.character.secret) t.character.secret = new URL(t.character.secret, root).href;
+    else delete t.character.secret;
   }
   return data;
 }

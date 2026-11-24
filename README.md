@@ -36,6 +36,7 @@ content/presets/<topic-id>/
   character/
     character.json      # id, name, age (18+), species, asset_rights
     00.webp ... 10.webp # stage images: 00 = start, 10 = ending
+    secret.webp         # optional: shown only after a perfect 21
 ```
 
 See [docs/content-guide.md](docs/content-guide.md) for the CSV format, image rules and validation. Run `pnpm content:check` to validate everything without building.

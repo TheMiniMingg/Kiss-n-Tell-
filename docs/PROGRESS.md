@@ -1,6 +1,6 @@
 # Kiss N Tell: project progress
 
-**Last updated:** 23 November 2026, 10:10 UTC  
+**Last updated:** 24 November 2026, 06:10 UTC  
 **Live site:** https://kiss-n-tell-chi.vercel.app  
 **Repo:** https://github.com/TheMiniMingg/Kiss-n-Tell- (public, MIT)
 
@@ -8,7 +8,7 @@ This is the living record of where the whole project stands. It is updated whene
 
 ## At a glance
 
-Everything built so far is merged to `main`: the web game, the desktop app with its pack editor, and the owner edit mode with donate and social buttons. The site is live from `main` with three sample topics, and the first Windows and macOS installers built successfully. What's left is mostly yours: content, links, a GitHub token for on-site saving, and reviewing 46 decisions. The main thing the project waits on is your content: topics, characters, art and the question CSVs.
+Everything built so far is merged to `main`: the web game, the desktop app with its pack editor, the owner edit mode with donate and social buttons, and the secret image for a perfect 21. The site is live from `main` with three sample topics, and the first Windows and macOS installers built successfully. What's left is mostly yours: content, links, a GitHub token for on-site saving, and reviewing 53 decisions. The main thing the project waits on is your content: topics, characters, art and the question CSVs.
 
 | Area | Status | Where |
 | --- | --- | --- |
@@ -16,8 +16,9 @@ Everything built so far is merged to `main`: the web game, the desktop app with 
 | Hosting | Live on Vercel, built from `main`, updates on every merge | kiss-n-tell-chi.vercel.app |
 | Desktop app and pack editor | **Merged to `main`** 23 Nov 09:52, audited | PR #2 |
 | Owner edit mode, donate and social buttons | **Merged to `main`** 23 Nov 10:05. Saving needs a GitHub token from you | PR #4 |
+| Secret image for a perfect 21 | **Merged to `main`** 24 Nov, audited | PR #5 |
 | Real topics, characters, art, questions | Waiting on you | `content/presets/` |
-| Decisions made for you (46) | Waiting on your review | decisions-for-review.pdf |
+| Decisions made for you (53) | Waiting on your review | decisions-for-review.pdf |
 | Desktop installers (Windows, macOS) | Proof build passed 10:00. A version tag makes a draft release | GitHub Releases |
 
 ## Roadmap phases
@@ -32,6 +33,7 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 | P3 Website launch | Static site, phone layout, 18+ notice, hosting | **Live from `main`** with sample topics. Full launch = real content |
 | P4 Desktop app and editor | Tauri shell, offline pack editor, ZIP import/export, unsigned installers | **Done**, merged to `main` (PR #2). Proof installer build passed |
 | Extra: owner tools | On-site owner edit mode behind a password, donate and social buttons | **Done**, merged to `main` (PR #4). Needs your GitHub token and links |
+| Extra: secret image | Optional 12th image per topic, unlocked only by a perfect 21 | **Done**, merged to `main` (PR #5). Placeholder secrets on the samples |
 | P5 Later | Bring-your-own-API question generation and image providers | Not started (after V1) |
 
 **V1 ship gate:** 3 complete topics, 33 validated images, passing tests, working website.
@@ -44,6 +46,7 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 - Blank, one-letter and multi-word answers are rejected without using up the question.
 - At 10 points the ending image (stage 10) shows straight away. Play continues and the score can reach 21.
 - Recently seen questions are skipped until the topic's pool runs out.
+- A perfect run (Legendary on all 7, 21 points) unlocks the topic's optional secret image, if it has one. No hint before then.
 - Content checks: at least 7 questions per topic, no duplicates, no word in two tiers, 11 images per character, age 18+.
 
 **Website** (`apps/web`, `packages/ui`)
@@ -64,7 +67,7 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 **Tests**
 - Web: 58 unit tests and 80 browser tests on computer and phone sizes (2 phone clipboard tests skipped on purpose), plus typecheck, content check and build, run on every pull request. All passed on the merged code.
 - Desktop: 15 editor browser tests, 5 Rust storage tests (clippy clean) and a native Linux build in CI.
-- Whole repo after all merges: 135 unit tests, 104 web browser tests (2 skipped on purpose), 15 desktop browser tests, Rust tests and clippy, all green.
+- Whole repo after PR #5: 146 unit tests, 114 web browser tests (2 skipped on purpose), 19 desktop browser tests, 6 Rust tests and clippy, all green.
 
 **Fixed in the second web audit** (8 screen sizes, 320 to 1920 px, plus a code review)
 - Text typed before a timeout no longer carries into the next question.
@@ -83,6 +86,13 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 - Arrow keys move between editor tabs, and the selected question scrolls into view.
 - Layout fixes: tabs don't wrap, words aren't split, medium window widths work, the New pack list scrolls.
 - Pack storage refuses symlinks.
+
+**Secret image for a perfect 21** (PR #5, see `docs/content-guide.md`)
+- Optional `character/secret.webp` (or png, jpg, svg) per topic, same size and shape rules as the stages.
+- On the 7th answer of a perfect run the image switches to the secret with a gold "Secret" frame. Results say "Secret unlocked!", the share card uses it, and the topic card shows "Best 21/21 · secret unlocked".
+- It's only downloaded once a player reaches question 7 with every answer Legendary, and the build names it by a hash so its address can't be guessed.
+- Works in the desktop editor and owner edit mode: a secret slot under the stages, preview toggle, ZIP import/export, copying a built-in topic.
+- The three sample topics have a gold-star placeholder secret, so it can be tried on the live site.
 
 **Owner edit mode** (`api/`, `packages/editor`, `content/site.json`, see `docs/owner-mode.md`)
 - A footer "Edit site" link or `/#edit` opens a password screen. The password is checked on the server and never sent to the browser.
@@ -111,13 +121,14 @@ The roadmap was reordered on 23 November for a web-first launch, so the editor n
 | [#1](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/1) | Web game, content tooling, tests, Vercel config | **Merged** 09:42 UTC |
 | [#2](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/2) | Desktop app and pack editor | **Merged** 09:52 UTC |
 | [#4](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/4) | Owner edit mode, donate and social buttons | **Merged** 10:05 UTC |
-| [#3](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/3) | This file and the PDF generator | Merges last, with the final numbers |
+| [#3](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/3) | This file and the PDF generator | **Merged** 10:10 UTC |
+| [#5](https://github.com/TheMiniMingg/Kiss-n-Tell-/pull/5) | Secret image for a perfect 21 | **Merged** 24 Nov |
 
-All build work is merged. Only this progress doc (#3) remains.
+All build work is merged.
 
 ## Decisions pending your review
 
-46 choices were made with the recommended option so the build didn't stop. Each has alternatives in **decisions-for-review.pdf**. To change one, reply with its number and letter, for example "3A, 9B". Anything you don't mention stays as built.
+53 choices were made with the recommended option so the build didn't stop. Each has alternatives in **decisions-for-review.pdf**. To change one, reply with its number and letter, for example "3A, 9B". Anything you don't mention stays as built.
 
 | # | Decision (as built) | # | Decision (as built) |
 | --- | --- | --- | --- |
@@ -154,14 +165,24 @@ All build work is merged. Only this progress doc (#3) remains.
 | 45 | Five editable site text fields (logo, tagline, topics heading, support line, footer note) |
 | 46 | Links in the desktop app open in your normal browser |
 
+| # | Secret image decision (as built) |
+| --- | --- |
+| 47 | Only a perfect run (Legendary on all 7, 21 points) unlocks it |
+| 48 | Optional `character/secret.<ext>`, same rules as the stages |
+| 49 | Revealed on the 7th answer and kept on the results screen |
+| 50 | No hint before unlocking; downloaded only on a perfect track at question 7 |
+| 51 | The share card uses the secret image |
+| 52 | Topic card shows "secret unlocked"; no gallery to view it again |
+| 53 | Sample topics have placeholder secrets |
+
 ## What needs you
 
 - [ ] **Pick the 3 topics and their characters.** You mentioned demon, snake and slime girls and humans; all must read as clearly adult.
-- [ ] **Make the art:** 11 images per character (00 = start, 10 = ending), 33 in total. Swimwear at most, no nudity. Portrait 3:4 (for example 768x1024), WebP preferred, up to 8 MB each.
+- [ ] **Make the art:** 11 images per character (00 = start, 10 = ending), 33 in total, plus an optional secret image per character for a perfect 21. Swimwear at most, no nudity. Portrait 3:4 (for example 768x1024), WebP preferred, up to 8 MB each.
 - [ ] **Write the question CSVs:** at least 7 questions per topic (15+ recommended for replay), ideally 20 to 50 answers per question, tiered Common/Rare/Legendary. Fact-check AI output. See `docs/content-guide.md`.
 - [ ] **Add a `GITHUB_TOKEN` setting to the Vercel project** so on-site edits can save. Steps are in `docs/owner-mode.md`.
 - [ ] **Add your donation link and social profile URLs**, either in owner edit mode or by sending them.
-- [ ] **Review the 46 decisions** and reply with any number and letter you want changed.
+- [ ] **Review the 53 decisions** and reply with any number and letter you want changed.
 - [ ] **Optional: pick a domain** (decision 23), for example kissntell.minime.design.
 
 ## Next steps
@@ -174,7 +195,7 @@ All build work is merged. Only this progress doc (#3) remains.
 
 ## Risks and notes
 
-- **Ending image is discoverable.** A static site can't hide stage 10 from someone using developer tools. Accepted, since there are no prizes.
+- **Ending and secret images are discoverable.** A static site can't hide them from someone using developer tools, because scoring happens in the browser. Accepted, since there are no prizes.
 - **Unsigned installers.** Windows SmartScreen and macOS Gatekeeper warn the first time. Signing needs paid certificates.
 - **Art must read as adult**, whatever age is written in `character.json`.
 - **AI-generated art** may not be protected by copyright, so the image tool's terms matter more than the art license.
@@ -183,21 +204,23 @@ All build work is merged. Only this progress doc (#3) remains.
 
 ## Timeline
 
-| When (23 Nov 2026, UTC) | What happened |
+| When (UTC) | What happened |
 | --- | --- |
-| 10:05 | PR #4 (owner edit mode, donate and social buttons) merged after its audit |
-| 10:00 | First Windows and macOS installer proof build passed |
-| 09:52 | PR #2 merged after its audit |
-| 09:42 | PR #1 merged after a second audit (10 fixes); site now builds from `main` |
-| 09:32 | Progress report and this doc opened as PR #3 |
-| 09:30 | Final audits started in all three build threads |
-| 09:26 | Owner edit mode, donate and social buttons started; password stored on Vercel only |
-| 09:22 | Desktop app and pack editor opened as PR #2; CI green by 09:26 |
-| 09:17 | Site live on Vercel; desktop decisions added to the review PDF (items 24 to 34) |
-| 09:06 | You chose Vercel hosting on your own account |
-| 09:01 | Web game audited (56 unit + 67 browser tests) and PR #1 marked ready; decisions PDF sent |
-| 08:53 | First playable web game opened as PR #1; desktop thread started |
-| 08:40 | You approved building the whole roadmap in parallel threads |
-| 08:13 to 08:35 | Three rounds of answers settled the rules, the name and the web-first order |
-| 07:56 | Roadmap audit delivered with 12 clarifying questions |
-| 07:53 | Project started from the v1.1 roadmap and an empty repo |
+| 24 Nov 06:10 | Secret image for a perfect 21 opened as PR #5 after tests and an audit; decisions 47 to 53 added |
+| 24 Nov 04:01 | You asked for a secret final image unlocked by a perfect 21 |
+| 23 Nov 10:05 | PR #4 (owner edit mode, donate and social buttons) merged after its audit |
+| 23 Nov 10:00 | First Windows and macOS installer proof build passed |
+| 23 Nov 09:52 | PR #2 merged after its audit |
+| 23 Nov 09:42 | PR #1 merged after a second audit (10 fixes); site now builds from `main` |
+| 23 Nov 09:32 | Progress report and this doc opened as PR #3 |
+| 23 Nov 09:30 | Final audits started in all three build threads |
+| 23 Nov 09:26 | Owner edit mode, donate and social buttons started; password stored on Vercel only |
+| 23 Nov 09:22 | Desktop app and pack editor opened as PR #2; CI green by 09:26 |
+| 23 Nov 09:17 | Site live on Vercel; desktop decisions added to the review PDF (items 24 to 34) |
+| 23 Nov 09:06 | You chose Vercel hosting on your own account |
+| 23 Nov 09:01 | Web game audited (56 unit + 67 browser tests) and PR #1 marked ready; decisions PDF sent |
+| 23 Nov 08:53 | First playable web game opened as PR #1; desktop thread started |
+| 23 Nov 08:40 | You approved building the whole roadmap in parallel threads |
+| 23 Nov 08:13 to 08:35 | Three rounds of answers settled the rules, the name and the web-first order |
+| 23 Nov 07:56 | Roadmap audit delivered with 12 clarifying questions |
+| 23 Nov 07:53 | Project started from the v1.1 roadmap and an empty repo |

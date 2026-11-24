@@ -1,8 +1,10 @@
 import {
   checkTimeout,
   currentQuestion,
+  isPerfect,
   MAX_ANSWER_LENGTH,
   nextQuestion,
+  onPerfectTrack,
   stageForScore,
   submitAnswer,
   timeLeftMs,
@@ -10,7 +12,7 @@ import {
   type RunState,
 } from "@kiss-n-tell/engine";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import type { GameTopic } from "../content.js";
+import { preloadImages, type GameTopic } from "../content.js";
 import { Modal } from "../components/Modal.js";
 import { StageMeter, StageViewer } from "../components/StageViewer.js";
 import { TierBadge } from "../components/TierBadge.js";
@@ -52,6 +54,16 @@ export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit, qui
   const showingResult = !answering && last?.questionId === q.id;
   const stage = stageForScore(run.score);
   const justWon = showingResult && run.wonAtQuestion === run.index + 1;
+  const secretUrl = topic.character.secret;
+  /** A perfect run reveals the secret image (when the topic has one) right on the last answer. */
+  const secretUnlocked = showingResult && !!secretUrl && isPerfect(run);
+  const isLastQuestion = run.index >= run.questions.length - 1;
+
+  // Fetch the secret image only once the player reaches the last question with
+  // every answer Legendary, so it appears instantly but is never downloaded otherwise.
+  useEffect(() => {
+    if (secretUrl && answering && isLastQuestion && onPerfectTrack(run)) preloadImages([secretUrl]);
+  }, [secretUrl, answering, isLastQuestion, run]);
 
   // Record each question as seen when it is shown (once per question).
   const shownRef = useRef(onQuestionShown);
@@ -125,7 +137,6 @@ export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit, qui
     if (e.repeat && (e.key === "Enter" || e.key === " ")) e.preventDefault();
   };
 
-  const isLast = run.index >= run.questions.length - 1;
   const msLeft = timeLeftMs(run, now);
   const secondsLeft = Math.ceil(msLeft / 1000);
   const fraction = answering ? msLeft / (q.timerSeconds * 1000) : 0;
@@ -152,7 +163,7 @@ export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit, qui
 
       <div className="play__layout">
         <div className="play__art">
-          <StageViewer character={topic.character} stage={stage} celebrate={justWon} />
+          <StageViewer character={topic.character} stage={stage} celebrate={justWon} secret={secretUnlocked} />
           <StageMeter stage={stage} />
         </div>
 
@@ -205,9 +216,12 @@ export function Play({ topic, initialRun, onQuestionShown, onFinish, onQuit, qui
               <div className="result" data-testid="result" role="status">
                 <TierBadge outcome={last.outcome} points={last.points} large />
                 {last.input && <p className="result__answer">You said <b>{last.input}</b></p>}
+                {secretUnlocked && (
+                  <p className="result__secret">Perfect {run.score}! You unlocked the secret image.</p>
+                )}
                 {justWon && (
                   <p className="result__win">
-                    {isLast ? "Ending unlocked on the final question!" : "Ending unlocked! Keep going to raise your score."}
+                    {isLastQuestion ? "Ending unlocked on the final question!" : "Ending unlocked! Keep going to raise your score."}
                   </p>
                 )}
                 <button ref={nextRef} className="btn btn--primary btn--wide" onClick={advance} onKeyDown={onNextKey}>

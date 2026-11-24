@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   checkTimeout,
+  isPerfect,
   MAX_SCORE,
+  onPerfectTrack,
   nextQuestion,
   stageForScore,
   startRun,
@@ -60,6 +62,44 @@ describe("balance fixtures (roadmap v1.1)", () => {
     });
   }
   it("max score is 21", () => expect(MAX_SCORE).toBe(21));
+});
+
+describe("perfect run (secret image)", () => {
+  it("7 Legendary answers is perfect", () => {
+    const { state } = play(rep<Pick>("legendary", 7));
+    expect(isPerfect(state)).toBe(true);
+    expect(summarize(state).perfect).toBe(true);
+    expect(summarize(state).score).toBe(MAX_SCORE);
+  });
+  it("one Rare answer (20 points) is not perfect", () => {
+    const { state } = play([...rep<Pick>("legendary", 6), "rare"]);
+    expect(state.score).toBe(20);
+    expect(summarize(state).perfect).toBe(false);
+  });
+  it("a slip on the first question is not perfect", () => {
+    const { state } = play(["timeout", ...rep<Pick>("legendary", 6)]);
+    expect(summarize(state).perfect).toBe(false);
+  });
+  it("is never perfect before the run is finished", () => {
+    const topic = makeTopic(7);
+    let state = startRun(topic.id, topic.questions, 0);
+    for (let i = 0; i < 6; i++) {
+      state = submitAnswer(state, WORD.legendary, 1).state;
+      expect(isPerfect(state)).toBe(false);
+      expect(onPerfectTrack(state)).toBe(true);
+      state = nextQuestion(state, 1);
+    }
+    expect(onPerfectTrack(state)).toBe(true);
+    state = submitAnswer(state, WORD.legendary, 2).state;
+    expect(isPerfect(state)).toBe(true);
+  });
+  it("leaves the perfect track after any non-Legendary answer", () => {
+    const topic = makeTopic(7);
+    let state = startRun(topic.id, topic.questions, 0);
+    expect(onPerfectTrack(state)).toBe(true);
+    state = submitAnswer(state, WORD.common, 1).state;
+    expect(onPerfectTrack(state)).toBe(false);
+  });
 });
 
 describe("stages and early win", () => {

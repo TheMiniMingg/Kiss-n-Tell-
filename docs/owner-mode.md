@@ -4,7 +4,7 @@ The website has a hidden editor for the site owner. Open it with the small **Edi
 
 After the password, owner mode has two tabs:
 
-- **Topics & questions**: the same pack editor as the desktop app, working on the game's own topics (`content/presets`). Change titles, questions and answers (Common, Rare, Legendary), the character, and the 11 stage images; preview a run; import or export a pack ZIP; add or delete topics.
+- **Topics & questions**: the same pack editor as the desktop app, working on the game's own topics (`content/presets`). Change titles, questions and answers (Common, Rare, Legendary), the character, the 11 stage images and the optional secret image for a perfect run; preview a run; import or export a pack ZIP; add or delete topics.
 - **Site text & links**: the logo text, tagline, topic heading, footer note, the donate button and social media links (`content/site.json`). Links must start with `https://`; a link left empty is kept as a placeholder and hidden from players.
 
 **Saving** makes one commit to the repository with only the files that changed. The commit triggers a Vercel deploy, so players see the change after about 1 to 2 minutes. Everything stays in git, so any change can be undone by reverting its commit.
@@ -30,6 +30,6 @@ Add them in the Vercel dashboard under **Project → Settings → Environment Va
 - The password is only checked on the server (`api/_lib/handler.ts`). A correct password gets a signed session cookie (HttpOnly, Secure, SameSite=Strict, 12 hours). Changing `EDIT_PASSWORD` signs every session out.
 - Wrong passwords: 5 wrong tries from one IP within 15 minutes lock that IP out for 15 minutes, doubling on each further lockout up to a day. 25 wrong tries from all IPs together lock the unlock for everyone for 15 minutes. Each wrong try also waits about half a second. The counters live in the function's memory, so a cold start resets them.
 - For a durable limit as well, add a Vercel Firewall rate-limit rule in the dashboard (**Firewall → Configure → New rule**): if the request path equals `/api/edit` and the query `op` equals `unlock`, rate limit to about 10 requests per 10 minutes per IP.
-- The server only writes `content/site.json` and the files a topic folder may contain (`content/presets/<id>/topic.json`, `questions.csv`, `character/character.json`, `character/00-10.<webp|png|jpg|jpeg|svg>`). Code, config and workflows can't be changed from the site.
+- The server only writes `content/site.json` and the files a topic folder may contain (`content/presets/<id>/topic.json`, `questions.csv`, `character/character.json`, `character/00-10.<webp|png|jpg|jpeg|svg>`, `character/secret.<webp|png|jpg|jpeg|svg>`). Code, config and workflows can't be changed from the site.
 - Requests must carry an `X-KNT-Editor` header and come from the same origin, so other sites can't use the owner's cookie.
 - Uploaded images are limited to 4 MB each (Vercel's request limit is 4.5 MB). WebP is the best choice for size.

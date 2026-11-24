@@ -1,4 +1,4 @@
-import { STAGE_COUNT, isSafeRelativePath, questionsFromCsv, questionsToCsv, type Issue } from "@kiss-n-tell/engine";
+import { SECRET_IMAGE_NAME, STAGE_COUNT, isSafeRelativePath, questionsFromCsv, questionsToCsv, type Issue } from "@kiss-n-tell/engine";
 import { emptyImages, isImageExt, stageName, type CharacterMeta, type PackDraft, type TopicMeta } from "./model.js";
 
 /**
@@ -8,17 +8,21 @@ import { emptyImages, isImageExt, stageName, type CharacterMeta, type PackDraft,
  *   questions.csv
  *   character/character.json
  *   character/00.webp ... character/10.webp
+ *   character/secret.webp            (optional: shown only after a perfect run)
  */
 export const TOPIC_FILE = "topic.json";
 export const QUESTIONS_FILE = "questions.csv";
 export const CHARACTER_FILE = "character/character.json";
 const STAGE_PATH = /^character\/(\d{2})\.([a-z0-9]+)$/;
+const SECRET_PATH = new RegExp(`^character\\/${SECRET_IMAGE_NAME}\\.([a-z0-9]+)$`);
 
 export type PackFiles = Map<string, Uint8Array>;
 
 /** True for the only paths a pack may contain. The Rust side enforces the same list. */
 export function isPackPath(path: string): boolean {
   if (path === TOPIC_FILE || path === QUESTIONS_FILE || path === CHARACTER_FILE) return true;
+  const s = SECRET_PATH.exec(path);
+  if (s) return isImageExt(s[1] as string);
   const m = STAGE_PATH.exec(path);
   return !!m && Number(m[1]) < STAGE_COUNT && isImageExt(m[2] as string);
 }
@@ -48,6 +52,7 @@ export function packToFiles(pack: PackDraft): PackFiles {
   pack.images.forEach((img, stage) => {
     if (img) files.set(`character/${stageName(stage)}.${img.ext}`, img.bytes);
   });
+  if (pack.secret) files.set(`character/${SECRET_IMAGE_NAME}.${pack.secret.ext}`, pack.secret.bytes);
   return files;
 }
 
@@ -107,10 +112,20 @@ export function packFromFiles(files: PackFiles, fallbackId = "pack"): { pack: Pa
     }
     images[stage] = { ext, bytes };
   }
+  let secret: PackDraft["secret"] = null;
+  for (const [path, bytes] of files) {
+    const ext = SECRET_PATH.exec(path)?.[1] ?? "";
+    if (!isImageExt(ext)) continue;
+    if (secret) {
+      issues.push({ level: "error", where: "character", message: "More than one secret image; kept the first." });
+      continue;
+    }
+    secret = { ext, bytes };
+  }
   for (const path of files.keys()) {
     if (!isPackPath(path)) issues.push({ level: "warning", where: path, message: `Ignored ${path}: not part of a pack.` });
   }
-  return { pack: { topic, character, questions, images }, issues };
+  return { pack: { topic, character, questions, images, secret }, issues };
 }
 
 /**

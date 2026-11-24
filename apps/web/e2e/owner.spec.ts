@@ -61,6 +61,23 @@ test("unlocking shows the topics from the repo; edits are saved as one commit wi
   expect(JSON.parse(server.files.get("content/presets/alpha/topic.json")!.toString())).toMatchObject({ id: "alpha", title: "Alpha Renamed", order: 1 });
 });
 
+test("adding a secret image to a topic commits character/secret.<ext> with the change", async ({ page }) => {
+  const server = await fakeEditApi(page);
+  await page.goto("/#edit");
+  await unlock(page);
+  await page.getByRole("complementary", { name: "Topics" }).getByRole("button", { name: /Alpha Topic/ }).click();
+  await page.getByRole("tab", { name: /Images/ }).click();
+  await page.getByRole("button", { name: "Choose a secret image" }).click();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="#c90"/></svg>`;
+  await page.getByTestId("image-input").setInputFiles({ name: "reward.svg", mimeType: "image/svg+xml", buffer: Buffer.from(svg) });
+  await expect(page.getByRole("button", { name: "Show the secret image in the preview" })).toBeVisible();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Saved to the site");
+  expect(server.commits).toHaveLength(1);
+  expect(server.commits[0]!.changes.map((c) => c.path)).toEqual(["content/presets/alpha/character/secret.svg"]);
+  expect(server.files.get("content/presets/alpha/character/secret.svg")?.toString()).toBe(svg);
+});
+
 test("a new topic with errors is saved as a hidden draft", async ({ page }) => {
   const server = await fakeEditApi(page);
   await page.goto("/#edit");

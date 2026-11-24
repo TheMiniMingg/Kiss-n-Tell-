@@ -6,6 +6,8 @@ export interface ShareCardInput {
   characterName: string;
   summary: RunSummary;
   siteLabel: string;
+  /** The image is the perfect-run secret rather than a stage. */
+  secret?: boolean;
 }
 
 const W = 1080;
@@ -62,7 +64,11 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
   ctx.fillText(` / ${summary.maxScore} pts`, 72 + scoreW, H - 170);
   ctx.fillStyle = "#ffffff";
   ctx.font = font(600, 40);
-  const line = summary.won ? `Ending unlocked · ${input.topicTitle}` : `Stage ${summary.stage}/10 · ${input.topicTitle}`;
+  const line = input.secret
+    ? `Perfect run · Secret unlocked · ${input.topicTitle}`
+    : summary.won
+      ? `${summary.perfect ? "Perfect run" : "Ending unlocked"} · ${input.topicTitle}`
+      : `Stage ${summary.stage}/10 · ${input.topicTitle}`;
   ctx.fillText(truncate(ctx, line, W - 144), 72, H - 105);
   ctx.fillStyle = "rgba(255,255,255,0.6)";
   ctx.font = font(500, 30);

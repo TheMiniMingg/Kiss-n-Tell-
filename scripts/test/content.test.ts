@@ -53,6 +53,33 @@ describe("preset content", () => {
     expect(errors(dir).join()).toMatch(/same aspect ratio/);
   });
 
+  it("loads the optional secret image, and plays fine without one", () => {
+    const dir = copyPreset();
+    const withSecret = loadTopic(dir);
+    expect(withSecret?.secretFile?.file).toBe("secret.svg");
+    expect(withSecret?.topic.character.secret).toBe("secret.svg");
+    unlinkSync(join(dir, "character", "secret.svg"));
+    const without = loadTopic(dir);
+    expect(without?.secretFile).toBeNull();
+    expect(without?.topic.character.secret).toBeUndefined();
+    expect(errors(dir)).toEqual([]);
+  });
+
+  it("flags two secret images, an unsupported secret type and a secret of a different shape", () => {
+    const dir = copyPreset();
+    const f = join(dir, "character", "secret.svg");
+    cpSync(f, join(dir, "character", "secret.png"));
+    cpSync(f, join(dir, "character", "secret.gif"));
+    let e = errors(dir).join();
+    expect(e).toMatch(/More than one secret image/);
+    expect(e).toMatch(/secret\.gif: unsupported image type/);
+    unlinkSync(join(dir, "character", "secret.png"));
+    unlinkSync(join(dir, "character", "secret.gif"));
+    writeFileSync(f, readFileSync(f, "utf8").replace('width="768" height="1024"', 'width="1024" height="768"'));
+    e = errors(dir).join();
+    expect(e).toMatch(/secret\.svg is 1024x768/);
+  });
+
   it("flags an underage character and a folder/id mismatch", () => {
     const dir = copyPreset();
     const cj = join(dir, "character", "character.json");

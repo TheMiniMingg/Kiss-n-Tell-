@@ -15,7 +15,7 @@ function question(i: number, timer = 20) {
   };
 }
 
-function topic(id: string, title: string, poolSize: number) {
+function topic(id: string, title: string, poolSize: number, secret?: string) {
   return {
     id,
     title,
@@ -29,13 +29,18 @@ function topic(id: string, title: string, poolSize: number) {
       width: 300,
       height: 400,
       stages: Array.from({ length: 11 }, (_, s) => `content/test/${id}/${String(s).padStart(2, "0")}.svg`),
+      ...(secret ? { secret: `content/test/${id}/${secret}` } : {}),
     },
   };
 }
 
+/** File name of Alpha's secret image in the test manifest. */
+export const SECRET_FILE = "a1b2c3d4e5.svg";
+
 export const MANIFEST = {
   schemaVersion: 1,
-  topics: [topic("alpha", "Alpha Topic", 14), topic("beta", "Beta Topic", 7)],
+  // Alpha has a secret image (perfect run); Beta doesn't.
+  topics: [topic("alpha", "Alpha Topic", 14, SECRET_FILE), topic("beta", "Beta Topic", 7)],
 };
 
 function stageSvg(label: string) {
